@@ -4,16 +4,15 @@ title: "AI Agents: AutoGPT architecture & breakdown"
 date: 2023-04-22 22:54:41 +0100
 categories: AI
 ---
-# Introduction
 
 I have always been interested in autonomous AI agents. With the recent release of [AutoGPT](https://github.com/Significant-Gravitas/Auto-GPT), I've been completely hooked experimenting with it. However, I've been using AutoGPT as a "black box", so I started getting curious about how it all works. Thankfully, the code is open source, so anyone can see what's going on under the hood. The following are my notes on the architecture of AutoGPT. Hopefully this helps those who are curious about how AutoGPT works. Also, AutoGPT can serve as a reference design for those who are building their own agentic AI systems.
 
 *Note*: I analyzed the code from [AutoGPT v0.2.1](https://github.com/Significant-Gravitas/Auto-GPT/releases/tag/v0.2.1), which I downloaded a week ago. The information below reflects AutoGPT 0.2.1. At the time of this writing (2023/04/22), AutoGPT v0.2.2 has already been released. Kudos to the incredible progress the community is making!
 
-# Architecture
+## Architecture
 ![block diagram](/assets/img/auto_gpt.svg)
 
-## Workflow
+# Workflow
 1. User (the human) defines the name of the AI agent, and specifies up to 5 goals, e.g. users of AutoGPT will see the following in their terminal (complete example in the Appendix under "*Example terminal message for initial user input*")
 ```
 Welcome to Auto-GPT!  Enter the name of your AI and its role below.
@@ -32,7 +31,7 @@ Goal 2: ...
 8. The context from (6) is also added to long-term memory. The general idea is we want a collection of `(vector, text)` pairs, and the ability to execute a [KNN](https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm)/approximate-KNN search to find the top-K most similar items from a given query. To get the text embeddings/vectors, we use OpenAI's ada-002 embeddings API. To store the `(vector, text)` pairs, we can use local memory (e.g. [FAISS](https://huggingface.co/learn/nlp-course/chapter5/6)), or even a scalable [vector database](https://www.pinecone.io/learn/vector-database/) like Pinecone. *AutoGPT 0.2.1 supports Pinecone, local datastore, and more. I used the local storage option, which writes the embedding vectors to disk in plain-text format.*
 9. Given the most recent context from the short-term memory (7), query the long-term memory from (8) to get the top-K most relevant peices of memory (*K=10 for AutoGPT 0.2.1*). The top-K most relevant memories are added to the prompt, under `{relevant memory}` in the diagram. For an example prompt that includes memories, see the Appendix "*Example-prompt-with-memories*". The memories are added under "This reminds you of events from your past".
 
-# Commands
+## Commands
 One fascinating and very powerful aspect of agentic AI is its ability to issue and execute commands. In AutoGPT, the LLM system (ChatGPT) is made aware of the available commands and their functionality via the following text in the prompt:
 ```
 Commands:
@@ -62,8 +61,8 @@ Each command has a short description (e.g. "Google Search", "Execute Python File
 
 I find this a very powerful concept, since one can extend the suite of commands available, which opens up many possibilities. For example, if we had a command to add products to the shopping cart of an online retailer, we can specify an objective to (1) find tennis strings most suitable for a topspin baseline player, and (2) add that string to the user's shopping cart. One can also extend commands to the physical world, such as smart home controls. Of course, it is very important to prioritize safety, as these LLM-based autonomous agents are still in their early days of development!
 
-# Appendix
-## Example terminal message for initial user input
+## Appendix
+# Example terminal message for initial user input
 ```
 Welcome to Auto-GPT!  Enter the name of your AI and its role below. Entering nothing will load defaults.
 Name your AI:  For example, 'Entrepreneur-GPT'
@@ -79,14 +78,14 @@ Goal 3: Shut down when you are done
 Goal 4: 
 ```
 
-## How ChatCompletions messages are printed
-AutoGPT uses OpenAI's ChatCompletions (TODO) endpoint, which expects a list of dicts `messages` (TODO fix!), which is then fed into ChatGPT via (TODO) some kind of markdown thing. For visual clarify, I have printed out the prompts that go into ChatGPT as a string. For example:
+# How ChatCompletions messages are printed
+AutoGPT uses OpenAI's [ChatCompletion](https://platform.openai.com/docs/guides/chat/introduction), which expects a list of dicts that represents the chat history. For visual clarify, I have printed out the prompts that go into ChatGPT as a string. For example:
 ```python
-messages = {
-    "system": "foo",
-    "user": "bar1",
-    "assistant": "bar2"
-}
+messages = [
+    {"role": "system", "content": "foo"},
+    {"role": "user", "content": "bar1"},
+    {"role": "assistant", "content": "bar2"}
+]
 ```
 will be printed as:
 ```
@@ -97,7 +96,7 @@ user: bar1
 assistant: bar2
 ```
 
-## Example initial prompt
+# Example initial prompt
 ```
 system: You are Foo, an AI that recommends tennis equipment for a specific player
 Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies with no legal complications.
@@ -176,7 +175,7 @@ system: This reminds you of these events from your past:
 user: Determine which next command to use, and respond using the format specified above:
 ```
 
-## Example json string returned by ChatGPT
+# Example json string returned by ChatGPT
 ```json
 {
     "thoughts": {
@@ -195,7 +194,7 @@ user: Determine which next command to use, and respond using the format specifie
 }
 ```
 
-## Example prompt with memories
+# Example prompt with memories
 ```
 system: You are Foo, an AI that recommends tennis equipment for a specific player
 Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies with no legal complications.
