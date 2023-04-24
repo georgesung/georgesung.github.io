@@ -5,7 +5,7 @@ date: 2023-04-22 22:54:41 +0100
 categories: AI
 ---
 
-I have always been interested in autonomous AI agents. With the recent release of [AutoGPT](https://github.com/Significant-Gravitas/Auto-GPT), I've been completely hooked experimenting with it. However, I've been using AutoGPT as a "black box", so I started getting curious about how it all works. Thankfully, the code is open source, so anyone can see what's going on under the hood. The following are my notes on the architecture of AutoGPT. Hopefully this helps those who are curious about how AutoGPT works. Also, AutoGPT can serve as a reference design for those who are building their own agentic AI systems.
+Recently I've found myself completely hooked experimenting with [AutoGPT](https://github.com/Significant-Gravitas/Auto-GPT), as have many others. Using AutoGPT as a black box, I started getting curious about how it works under the hood. Thankfully the code is open source, so I decided to take a look. The following are my notes on the architecture of AutoGPT. Hopefully this helps those who are curious about how AutoGPT works. Also, AutoGPT can serve as a reference design for those who are building their own agentic AI systems.
 
 *Note*: I analyzed the code from [AutoGPT v0.2.1](https://github.com/Significant-Gravitas/Auto-GPT/releases/tag/v0.2.1), which I downloaded a week ago. The information below reflects AutoGPT 0.2.1. At the time of this writing (2023/04/22), AutoGPT v0.2.2 has already been released. Kudos to the incredible progress the community is making!
 
