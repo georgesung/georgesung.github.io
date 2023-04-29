@@ -23,3 +23,13 @@ layout: default
   <p><strong>Page not found :(</strong></p>
   <p>The requested page could not be found.</p>
 </div>
+
+<script>
+// URL redirect for backwards compatibility
+if (location.pathname === '/ai/2023/04/22/autogpt-arch.html') {
+  window.location.replace('/ai/autogpt-arch/');
+} //else if (location.pathname === '/another-old-url') {
+//  window.location.replace('/another-new-url');
+//}
+// Add more redirections as needed
+</script>
