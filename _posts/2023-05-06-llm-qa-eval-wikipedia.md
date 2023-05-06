@@ -110,7 +110,11 @@ Question: {question}
 ```
 The question-checking LLM should respond with "yes" or "no". If we don't get a "yes", we can assume the question cannot be answered, and any response from the question-answering LLM can be ignored, and a simple "I don't know" can be returned the the user.
 
-In my code, the question-checking and question-answering LLMs use the same LLM instance, just different prompts. Thus, for an answerable question, the inference latency will involve two calls to the LLM. If latency is an issue, one can load two LLM instances (they don't even need to be the same type of LLM), and run both question-checking and question-answering LLMs in parallel.
+In my code, the question-checking and question-answering LLMs use the same LLM instance, just different prompts. Thus, for an answerable question, the inference latency will involve two calls to the LLM. If latency is an issue, one can load two LLM instances (they don't even need to be the same type of LLM), and run both question-checking and question-answering LLMs in parallel. Visually, it may look something like this:
+
+![question and answer](/assets/img/wikiqa_guardrail.svg)
+
+The results are much better:
 
 |Article|Question|gpt-3.5-turbo|lmsys/fastchat-t5-3b-v1.0|google/flan-t5-xl|google/flan-t5-xxl|
 |--|--|--|--|--|--|
