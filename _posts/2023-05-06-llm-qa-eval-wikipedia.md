@@ -25,7 +25,9 @@ Embedding models:
 * [text-embedding-ada-002](https://platform.openai.com/docs/guides/embeddings/what-are-embeddings): OpenAI's ada-002 text embedding model
 * [hkunlp/instructor-xl](https://huggingface.co/hkunlp/instructor-xl): The [INSTRUCTOR-XL](https://instructor-embedding.github.io/) embedding model, Apache 2.0 license
 
-Note there are many more exciting open source + commercially viable models to try out, I just haven't yet had time to test them 😄
+There are many more exciting open source + commercially viable models to try out, I just haven't yet had time to test them 😄
+
+*Note on terminology*: In this blog post I only refer to generative LLMs as "LLMs", even though large embedding models can also be considered ["Large Language Models"](https://en.wikipedia.org/wiki/Large_language_model). 
 
 ## Basic document Q&A system
 First, below is the basic Wikipedia article Q&A system I built ([code](https://github.com/georgesung/LLM-WikipediaQA)). I used [Wikipedia-API](https://pypi.org/project/Wikipedia-API/) to search/retrieve/beautify Wikipedia articles, [LangChain](https://python.langchain.com/en/latest/index.html) for the Q&A framework, and OpenAI & [HuggingFace](https://huggingface.co/) models for embeddings and LLMs.
