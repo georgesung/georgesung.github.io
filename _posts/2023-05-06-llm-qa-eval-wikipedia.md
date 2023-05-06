@@ -8,7 +8,7 @@ categories: AI
 ## TLDR
 For simple Wikipedia article Q&A, I compared OpenAI GPT 3.5, FastChat-T5, FLAN-T5-XXL, and FLAN-T5-XL. GPT 3.5 provided the best answers, but FastChat-T5 was very close in performance (with a basic guardrail). The T5 models I tested are all licensed under Apache 2.0, so they are commercially viable.
 
-For the embedding model, I compared OpenAI text-embedding-ada-002 and the open source INSTRUCTOR-XL models. The INSTRUCTOR-XL model performed better, which is encouraging since INSTRUCTOR-XL is also licensed under Apache 2.0.
+For the embedding model, I compared OpenAI text-embedding-ada-002 and the open source INSTRUCTOR-XL models. The INSTRUCTOR-XL model performed better, which is encouraging since INSTRUCTOR-XL is also licensed under Apache 2.0. (*Update*: I just noticed both INSTRUCTOR-XL/LARGE models also perform better on the [MTEB Leaderboard](https://huggingface.co/spaces/mteb/leaderboard))
 
 My code for running these comparisons are available [here](https://github.com/georgesung/LLM-WikipediaQA).
 
