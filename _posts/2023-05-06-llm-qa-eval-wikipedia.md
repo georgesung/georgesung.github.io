@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Open Source LLM Comparison for Document Q&A"
+title: "OpenAI vs Open Source LLM Comparison for Document Q&A"
 date: 2023-05-06 19:00:00 +0100
 categories: AI
 ---
