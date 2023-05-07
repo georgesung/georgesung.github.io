@@ -10,7 +10,7 @@ For simple Wikipedia article Q&A, I compared OpenAI GPT 3.5, FastChat-T5, FLAN-T
 
 For the embedding model, I compared OpenAI text-embedding-ada-002 and the open source INSTRUCTOR-XL models. The INSTRUCTOR-XL model performed better, which is encouraging since INSTRUCTOR-XL is also licensed under Apache 2.0. (*Update*: I just noticed both INSTRUCTOR-XL/LARGE models also perform better on the [MTEB Leaderboard](https://huggingface.co/spaces/mteb/leaderboard))
 
-My code for running these comparisons are available [here](https://github.com/georgesung/LLM-WikipediaQA).
+The code for running these comparisons are available both in my [Google Colab notebook](https://colab.research.google.com/drive/1p0cKg6LWzfuHLAeK4x-YBYjc0VBW6XoC) and [Github repo](https://github.com/georgesung/LLM-WikipediaQA).
 
 ## Intro
 The recent developments in open source LLMs to match ChatGPT have been incredibly exciting. There are great places to try out these new LLMs, e.g. on HuggingFace Spaces. Inspired by [The Ultimate Battle of Language Models: Lit-LLaMA vs GPT3.5 vs Bloom vs …](https://lightning.ai/pages/community/community-discussions/the-ultimate-battle-of-language-models-lit-llama-vs-gpt3.5-vs-bloom-vs/), I wanted to try out different LLMs for Q&A on multiple articles with various questions. I was also particularly interested in commercially viable open source LLMs (so not Llama-based, but I'm curious!), since the use cases for these are broader, e.g. document Q&A/chat on internal company documentation. Thus I decided to try out the following open source LLMs and embedding models, using the OpenAI models as a benchmark:
@@ -112,7 +112,7 @@ Question: {question}
 ```
 The question-checking LLM should respond with "yes" or "no". If we don't get a "yes", we can assume the question cannot be answered, and any response from the question-answering LLM can be ignored, and a simple "I don't know" can be returned the the user.
 
-In my code, the question-checking and question-answering LLMs use the same LLM instance, just different prompts. Thus, for an answerable question, the inference latency will involve two calls to the LLM. If latency is an issue, one can load two LLM instances (they don't even need to be the same type of LLM), and run both question-checking and question-answering LLMs in parallel. Visually, it may look something like this:
+In my [code](https://github.com/georgesung/LLM-WikipediaQA/blob/cd6b693959709d2fc6108a000592a9c690bfcabc/WikipediaQA.py#L144), the question-checking and question-answering LLMs use the same LLM instance, just different prompts. Thus, for an answerable question, the inference latency will involve two calls to the LLM. If latency is an issue, one can load two LLM instances (they don't even need to be the same type of LLM), and run both question-checking and question-answering LLMs in parallel. Visually, it may look something like this:
 
 ![question and answer](/assets/img/wikiqa_guardrail.svg)
 
