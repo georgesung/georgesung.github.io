@@ -1,0 +1,170 @@
+---
+layout: post
+title: "Fine-tuning OpenLLaMA-7B with QLoRA for instruction following"
+date: 2023-07-02 19:00:00 +0100
+categories: AI
+---
+
+## TLDR
+I ran instruction fine-tuning with QLoRA on the OpenLLaMA-7B base model, using the HuggingFace library. I used a ShareGPT-based conversation dataset with the safety guardrails and alignment removed. I ran the training on a 24GB GPU (NVIDIA A10G) for ~18 hours, and the model outputs seem coherent. The trained model is available on HuggingFace Hub [here](georgesung/open_llama_7b_qlora_uncensored), and the code for model training is available on Github [here](https://github.com/georgesung/llm_qlora/tree/main).
+
+## Motivation
+After trying out the multitude of LLMs available these days, I wanted to see the possibilities of fine-tuning an LLM myself. With the availability of powerful base LLMs (e.g. LLaMA, Falcon, MPT, etc.) and instruction tuning datasets, along with the development of LoRA and QLoRA, instruction fine-tuning a base model is increasingly accessible to more people/organizations.
+
+## Setup
+To start playing around with instruction fine-tuning, I decided to use OpenLLaMA-7B as a base model. Since OpenLLaMA is an open source replication of LLaMA, I can leverage much of the code/concepts the community has already done with LLaMA (e.g. when debugging an [`eos_token` issue](https://github.com/huggingface/transformers/issues/22794#issuecomment-1598977285)). OpenLLaMA is also permissively licenced via Apache 2.0, so that's a great bonus. I also chose the 7B model, since I think 7B models are generally powerful enough for many use cases, and not so big that it becomes too slow to experiment on.
+
+For the instruction tuning dataset, I decided to use [ehartford/wizard_vicuna_70k_unfiltered](https://huggingface.co/datasets/ehartford/wizard_vicuna_70k_unfiltered). I believe this dataset was seeded with ShareGPT data and evolved via [Evol-Instruct](https://arxiv.org/abs/2304.12244) (*note*: I could be wrong). This 70k conversation dataset was then pruned to remove conversations with "As an AI language model..." and moral lecturing, leaving around 35k conversations remaining. Thus, if the instruction fine-tuning is successful, the resulting LLM should not have safety/moral/alignment/etc behavior built-in (so use with care). This opens up avenues for future exploration regarding how to further update the model to implement custom alignment behavior, e.g. with further supervised fine-tuning and/or RLAIF/RLHF.
+
+Finally, I decided to use QLoRA as the fine-tuning algorithm, as I want to see what can be accomplished with relatively accessible hardware. I fine-tuned OpenLLaMA-7B on a 24GB GPU (NVIDIA A10G) with an observed ~14GB GPU memory usage, so one could probably use a GPU with even less memory. It would be cool to see folks with consumer-grade GPUs fine-tuning 7B+ LLMs on their own PCs! I do note that an RTX 3090 also has 24GB memory 😀
+
+## Concepts
+# Pre-training vs instruction fine-tuning
+From [LIMA paper](https://arxiv.org/abs/2305.11206), almost all the LLM's knowledge is learned during pre-training. Instruction fine-tuning can help the model follow user instructions to make use of the pre-trained knowledge, and also output text in a particular style. Thus, I don't expect the LLM to learn any new knowledge from the instruction tuning, but rather learn the "skills" necessary to extract its knowledge from pre-training and provide useful responses.
+
+# What is LoRA?
+Very broadly, LoRA (Low-Rank Adaptation) is an algorithm that allows us to fine-tune a model using very little computational overhead, compared to standard supervised fine-tuning of the entire model. This means we can fine-tune an LLM with lower-end hardware and less training time, compared to standard fine-tuning. Note LoRA can be applied to any model, such as LLMs and image generation models like Stable Diffusion.
+
+First, we choose the subset of weights in the model we want to fine-tune. For fine-tuning OpenLLaMA, I chose the Q, K, V weight matrices to fine-tune (see [The Illustrated Transformer](http://jalammar.github.io/illustrated-transformer/) blog post for more details about Q, K, V). We observe in standard fine-tuning that the fine-tuned weight matrix can be expressed as:
+
+W = W<sub>0</sub> + ΔW
+
+LoRA trains separate parameters/weights to express ΔW, while keeping the original model's weights W<sub>0</sub> frozen. To further reduce the trainable parameters, LoRA expresses ΔW as:
+
+ΔW = A * B
+
+where A and B are separate learned weight matrices. From LLaMA/OpenLLaMA, the Q, K, V matrices are 4096x4096, so 16M parameters each. In my LoRA config, I set the LoRA rank to 8, which means A is a 4096x8 matrix and B is a 8x4096 matrix (A*B results in a 4096x4096 matrix, representing ΔW). The number of parameters of A and B combined is 65k, which is a 256x reduction in number of parameters compared to the original W<sub>0</sub> matrix.
+
+Not only do we get a significant decrease in the number of trainable parameters for each Q, K, V weight matrix, we are also *not* training the other weights in the model. Overall, for the fine-tuning I ran using QLoRA on OpenLLaMA, I am only training 0.18% of the total parameters.
+
+Another cool thing about LoRA is that while we train separate adapters (A and B), we can *merge* the adapters back into the base model by simply adding A*B to W<sub>0</sub> (recall W = W<sub>0</sub> + ΔW). Thus, after merging the adapters with the base OpenLLaMA model, we can run inference on the merged model the same way we run inference on any LLaMA-family model, with no inference latency penalty.
+
+For more details about LoRA, I suggest [this blog post](https://lightning.ai/pages/community/tutorial/lora-llm/) by Lightning AI, and the original [LoRA paper](https://arxiv.org/abs/2106.09685).
+
+# What is QLoRA?
+QLoRA expands on LoRA by quantizig the base model to 4 bits during LoRA training. This allows us to run LoRA fine-tuning with a smaller GPU memory footprint. There is much more detail about how this algorithm works (e.g. it dequantizes the 4 bit values to 16 bits just in time for forward/backward pass, double quantization, etc.), and honestly I am still trying to wrap my head around it. In any case, I suggest you read the [QLoRA paper](https://arxiv.org/abs/2305.14314) for more detail, and a better explanation 😛
+
+## Implementation
+Concepts aside, here is how I ran instruction fine-tuning on OpenLLaMA-7B with QLoRA using HuggingFace.
+
+# QLoRA configuration
+Before we load the base model, we need to set up the quantization settings for QLoRA, to be applied to the base model later.
+```python
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16
+)
+```
+[View code on Github](https://github.com/georgesung/llm_qlora/blob/main/QloraTrainer.py#L22)
+
+Here, we are quantizing the base model using 4 bits, with the 4-bit NormalFloat datatype proposed in the [QLoRA paper](https://arxiv.org/abs/2305.14314). For forward & backward pass computations during training, parameters will be dequantized to [16-bit BrainFloat](https://en.wikipedia.org/wiki/Bfloat16_floating-point_format) (`torch.bfloat16`). We will also use Double Quantization (see QLoRA paper) to save even more memory.
+
+# Load base model & tokenizer
+Let's load the base model OpenLLaMA-7B and its corresponding tokenizer.
+```python
+tokenizer = LlamaTokenizer.from_pretrained("openlm-research/open_llama_7b")
+model = LlamaForCausalLM.from_pretrained("openlm-research/open_llama_7b", quantization_config=bnb_config, device_map={"":0})
+```
+Note the QLoRA config `bnb_config` is passed in as the quantization config.
+
+For LLaMA models, the default tokenizer does not specify a pad token, so make sure we specify one:
+```python
+tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+```
+[View code on Github](https://github.com/georgesung/llm_qlora/blob/main/QloraTrainer.py#L29)
+
+*Warning:* I see some examples where `tokenizer.pad_token = tokenizer.eos_token` is set. *Do not do this*. When the model is trained like this, it will never learn to output the eos_token / end-of-sequence token (see [this Github issue](https://github.com/huggingface/transformers/issues/22794#issuecomment-1598977285)). This means the model will never stop generating tokens during inference. From my experience, this leads to the model generating an entire simulated conversation between the user and the model, when given just a single instruction.
+
+# Data pre-processing
+The dataset I used was [ehartford/wizard_vicuna_70k_unfiltered](https://huggingface.co/datasets/ehartford/wizard_vicuna_70k_unfiltered) available on HuggingFace. Examining the data, it is a collection of conversations, with each conversation structured as such (FYI I made up the conversation below just to illustrate):
+```
+[
+    {"from": "human", "value": "Hello"},
+    {"from": "gpt", "value": "Hi, how are you?"},
+    {"from": "human", "value": "I'm fine."},
+    {"from": "gpt", "value": "How can I help you?"},
+    ...
+]
+```
+
+To train the model, I need to convert the conversation to a string, so I adopted this common format:
+```
+### HUMAN:
+Hello
+
+### RESPONSE:
+Hi, how are you?<eos_token>
+
+### HUMAN:
+I'm fine.
+
+### RESPONSE:
+How can I help you?<eos_token>
+...
+```
+
+Note I added the `eos_token` after each response, so during inference the model can stop generating tokens after it completes its response.
+
+[View code on Github](https://github.com/georgesung/llm_qlora/blob/main/QloraTrainer.py#L134)
+
+# LoRA configuration
+Now we can set up the LoRA configuration:
+```python
+config = LoraConfig(
+    r=8,
+    lora_alpha=32,
+    target_modules=["q_proj", "k_proj", "v_proj"],
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM"
+)
+model = get_peft_model(self.base_model, config)
+```
+
+As mentioned earlier, I set the LoRA rank `r` to 8, and I am tuning the Q, K, and V weight matrices `["q_proj", "k_proj", "v_proj"]`.
+
+[View code on Github](https://github.com/georgesung/llm_qlora/blob/main/QloraTrainer.py#L54)
+
+# Run training loop
+Now we run the training loop using HuggingFace's [Trainer](https://huggingface.co/docs/transformers/main_classes/trainer):
+```python
+trainer = transformers.Trainer(
+    model=model,
+    train_dataset=data["train"],
+    args=transformers.TrainingArguments(
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=4,
+        warmup_steps=100,
+        num_train_epochs=1,
+        learning_rate=2e-4,
+        fp16=True,
+        logging_steps=20,
+        output_dir=self.config["trainer_output_dir"],
+        report_to="tensorboard",
+    ),
+    data_collator=transformers.DataCollatorForLanguageModeling(self.tokenizer, mlm=False),
+)
+```
+[View code on Github](https://github.com/georgesung/llm_qlora/blob/main/QloraTrainer.py#L72)
+
+Training for one full epoch on the dataset took about 18 hours on an A10G GPU with 24 GB GPU memory.
+
+# Merge model
+After the QLoRA training is complete, we have our trained adapters. Now we can merge the adapters with the base model. I noticed there were some issues with merging the adapter with the 4-bit quantized model, so I had to reload the model separately before merging, as such:
+```python
+base_model = LlamaForCausalLM.from_pretrained("openlm-research/open_llama_7b", device_map="cpu")
+
+adapter_save_path = f"{self.config['model_output_dir']}/{self.config['model_name']}_adapter"
+model = PeftModel.from_pretrained(base_model, adapter_save_path)
+
+self.merged_model = model.merge_and_unload()
+
+model_save_path = f"{self.config['model_output_dir']}/{self.config['model_name']}"
+self.merged_model.save_pretrained(model_save_path)
+self.tokenizer.save_pretrained(model_save_path)
+```
+[View code on Github](https://github.com/georgesung/llm_qlora/blob/main/QloraTrainer.py#L101)
+
+After running some inference on the merged model to see if the output makes sense, I uploaded the model to HuggingFace Hub per the instructions [here](https://huggingface.co/docs/hub/repositories-getting-started#terminal).
