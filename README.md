@@ -94,3 +94,35 @@ If you need to change your custom GitHub Pages domain name, update the file:
 * **`public/CNAME`**
 
 Next.js copies this file into your static production build folder automatically, ensuring Github Pages continues hosting your custom URL seamlessly.
+
+---
+
+## 🚀 Deployment to GitHub Pages
+
+Previously, GitHub Pages automatically built your Jekyll site in the cloud. For this modern Next.js static site, we utilize a automated, zero-downtime **GitHub Actions** compilation and deployment workflow.
+
+### 📦 Automatic Deployment via GitHub Actions (Recommended)
+
+We have created an automated deployment workflow under **`.github/workflows/deploy.yml`**. 
+
+To activate it on GitHub:
+
+1. Push your changes and merge this migration branch into your main branch (e.g., `master`).
+2. Go to your GitHub repository in your web browser.
+3. Click on the **Settings** tab.
+4. On the left sidebar, click **Pages** (under the "Code and automation" section).
+5. Under **Build and deployment** -> **Source**, click the dropdown and select **GitHub Actions** (instead of "Deploy from a branch").
+6. That's it! Every time you push a change or publish an article on your main branch, GitHub Actions will automatically spin up, install dependencies, run `npm run build`, and deploy the resulting static `out/` folder to GitHub Pages with zero downtime.
+
+---
+
+### 💻 Manual Deployment (Alternative)
+
+If you ever need to manually deploy or build without GitHub Actions:
+
+1. Run the local build command to export the static site:
+   ```bash
+   npm run build
+   ```
+2. This creates a `/out/` folder at the root of your directory, containing pure statically generated HTML/CSS/JS and assets.
+3. You can copy or push the *contents* of this `/out/` folder directly to your deployment branch (e.g., `gh-pages` or the root of a deployment repository). Note that the `/out/` directory itself is ignored by Git, ensuring your source branch stays pristine and un-cluttered.
