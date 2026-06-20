@@ -11,7 +11,7 @@ interface PageProps {
   }>;
 }
 
-let highlighterInstance: any = null;
+let highlighterInstance: Awaited<ReturnType<typeof createHighlighter>> | null = null;
 
 async function getHighlighter() {
   if (!highlighterInstance) {
