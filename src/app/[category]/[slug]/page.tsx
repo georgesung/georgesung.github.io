@@ -46,7 +46,7 @@ export default async function PostPage({ params }: PageProps) {
   const htmlContent = await marked.parse(post.content);
 
   return (
-    <article className="container max-w-3xl mx-auto px-4 py-12 md:py-16">
+    <article className="container max-w-4xl mx-auto px-4 py-12 md:py-16">
       <div className="mb-8">
         <Link 
           href="/" 
