@@ -19,7 +19,7 @@ export default function Home() {
             Hi, I&apos;m George Sung.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-            Welcome to my blog, it&apos;s about AI :) All views and opinions expressed here are my own
+            Welcome to my blog, it&apos;s about AI :) All views and opinions expressed here are my own.
           </p>
           <div className="flex gap-4">
             <Link

@@ -76,14 +76,14 @@ export default function AboutPage() {
               Hi! My name is <strong className="text-foreground">Jou-ching (George) Sung</strong>. I love learning and tinkering with all things AI -- from AI agents, to AI model training and serving, to AI chips.
             </p>
             <p>
-              My professional background spans (TODO: list the areas my professional background spans...)
+              My professional background spans semiconductor chip design, machine learning for autonomous vehicles (reinforcement learning and path planning), deep learning for large-scale recommender systems, and most recently, AI agents, generative media, and inference optimization.
             </p>
           </div>
 
           <div className="border-t pt-6 border-border">
             <h3 className="text-lg font-bold text-foreground mb-3">More</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              For more about me, feel free to check out my LinkedIn, GitHub, and/or HuggingFace. (TODO: insert links)
+              For more about me, feel free to check out my <a href="https://www.linkedin.com/in/georgesung/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">LinkedIn</a>, <a href="https://github.com/georgesung" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">GitHub</a>, and/or <a href="https://huggingface.co/georgesung" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">HuggingFace</a>.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
