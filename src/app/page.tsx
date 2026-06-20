@@ -16,10 +16,10 @@ export default function Home() {
       <section className="mb-16 md:mb-24">
         <div className="max-w-2xl">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-4">
-            Hi, I'm George Sung.
+            Hi, I&apos;m George Sung.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-            I'm a <strong className="text-foreground">machine learning engineer</strong> exploring the frontiers and applications of AI. On this blog, I write deep dives on agent architectures, LLM fine-tuning, and technical lessons from building in the AI ecosystem.
+            I&apos;m a <strong className="text-foreground">machine learning engineer</strong> building AI agents, generative media, and model inference optimizations. On this blog, I write deep dives on agent architectures, LLM fine-tuning, and technical lessons from building in the AI ecosystem.
           </p>
           <div className="flex gap-4">
             <Link 

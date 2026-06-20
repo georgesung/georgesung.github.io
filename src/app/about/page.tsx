@@ -73,20 +73,23 @@ export default function AboutPage() {
 
           <div className="prose max-w-none text-muted-foreground space-y-4 text-base md:text-lg leading-relaxed">
             <p>
-              Hi! My name is <strong className="text-foreground">George Sung</strong>. I'm a machine learning engineer who is deeply passionate about exploring the frontiers and real-world applications of Artificial Intelligence.
+              Hi! My name is <strong className="text-foreground">George Sung</strong>. I&apos;m a machine learning engineer who is deeply passionate about building AI systems, from the chips they run on to the agents powering them today.
             </p>
             <p>
-              I am super excited about all the possibilities that have opened up with LLMs, autonomous agents, and instruction tuning. This blog is where I document my technical experiments, architectural breakdowns, and hands-on learnings.
+              My work spans across <strong className="text-foreground">AI agents, generative media, and inference optimization</strong>. Currently, I focus on designing and deploying custom AI agents, building image/video generation workflows, and optimizing model inference cost/latency/quality across hybrid API and self-hosted environments.
             </p>
             <p>
-              Whether it's dissecting the inner workings of AI agent frameworks, benchmarking model fine-tuning techniques (like QLoRA), or analyzing agentic traffic patterns, I love diving deep into the code and sharing structured insights with the developer community.
+              Before my current focus, I spent years building large-scale personalization and recommendation systems using deep learning, as well as applying reinforcement learning and imitation learning for autonomous vehicle path-planning. I also have a background in semiconductor chip design, working on CPU and GPU SoC-level verification.
+            </p>
+            <p>
+              This blog is where I document my technical experiments, architectural breakdowns, and hands-on learnings. Whether it&apos;s dissecting the inner workings of AI agent frameworks, benchmarking model fine-tuning techniques (like QLoRA), or analyzing LLM traffic patterns, I love diving deep into the code and sharing structured insights.
             </p>
           </div>
 
           <div className="border-t pt-6 border-border">
             <h3 className="text-lg font-bold text-foreground mb-3">Get in Touch</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              I'm always open to discussing ML engineering, LLM architectures, and collaboration opportunities.
+              I&apos;m always open to discussing ML engineering, LLM architectures, and collaboration opportunities.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link 
