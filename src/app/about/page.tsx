@@ -76,7 +76,7 @@ export default function AboutPage() {
               Hi! My name is <strong className="text-foreground">Jou-ching (George) Sung</strong>. I love learning and tinkering with all things AI -- from AI agents, to AI model training and serving, to AI chips.
             </p>
             <p>
-              My professional background spans semiconductor chip design, machine learning for autonomous vehicles (reinforcement learning and path planning), deep learning for large-scale recommender systems, and most recently, AI agents, generative media, and inference optimization.
+              My professional background spans AI agents, LLM post-training, LLM/image-gen/TTS model inference optimization, large-scale ML recommender systems, reinforcement learning for autonomous driving, and semiconductor chip design. A bit all over the place, but certainly very fun! And hopefully useful ;)
             </p>
           </div>
 
