@@ -1,0 +1,936 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.3">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2026-02-01T00:00:43+08:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Jou-ching (George) Sung</title><subtitle>Hi! Welcome to my site. More info about me on https://www.linkedin.com/in/georgesung/</subtitle><entry><title type="html">Tracing Claude Code’s LLM Traffic: Agentic loop, sub-agents, tool use, prompts</title><link href="http://localhost:4000/ai/tracing-claude-codes-llm-traffic/" rel="alternate" type="text/html" title="Tracing Claude Code’s LLM Traffic: Agentic loop, sub-agents, tool use, prompts" /><published>2026-01-26T20:00:00+08:00</published><updated>2026-01-26T20:00:00+08:00</updated><id>http://localhost:4000/ai/tracing-claude-codes-llm-traffic</id><content type="html" xml:base="http://localhost:4000/ai/tracing-claude-codes-llm-traffic/">&lt;p&gt;Please find this blog post on either:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://medium.com/@georgesung/tracing-claude-codes-llm-traffic-agentic-loop-sub-agents-tool-use-prompts-7796941806f5&quot;&gt;Medium&lt;/a&gt; &lt;em&gt;or&lt;/em&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://open.substack.com/pub/georgesung/p/tracing-claude-codes-llm-traffic?utm_campaign=post-expanded-share&amp;amp;utm_medium=web&quot;&gt;Substack&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Depending on your preference!&lt;/p&gt;</content><author><name></name></author><category term="AI" /><summary type="html">Please find this blog post on either: Medium or Substack</summary></entry><entry><title type="html">Fine-tuning OpenLLaMA-7B with QLoRA for instruction following</title><link href="http://localhost:4000/ai/qlora-ift/" rel="alternate" type="text/html" title="Fine-tuning OpenLLaMA-7B with QLoRA for instruction following" /><published>2023-07-03T02:00:00+08:00</published><updated>2023-07-03T02:00:00+08:00</updated><id>http://localhost:4000/ai/qlora-ift</id><content type="html" xml:base="http://localhost:4000/ai/qlora-ift/">&lt;h2 id=&quot;tldr&quot;&gt;TLDR&lt;/h2&gt;
+&lt;p&gt;I ran instruction fine-tuning with QLoRA on the OpenLLaMA-7B base model, using the HuggingFace library. I used a ShareGPT-based conversation dataset with the safety guardrails and alignment removed. I ran the training on a 24GB GPU (NVIDIA A10G) for ~18 hours, and the model outputs seem coherent. The trained model is available on HuggingFace Hub &lt;a href=&quot;https://huggingface.co/georgesung/open_llama_7b_qlora_uncensored&quot;&gt;here&lt;/a&gt;, and the code for model training is available on Github &lt;a href=&quot;https://github.com/georgesung/llm_qlora/tree/main&quot;&gt;here&lt;/a&gt;. Example inference results are available in this &lt;a href=&quot;https://colab.research.google.com/drive/1IlpeofYD9EU6dNHyKKObZhIzkBMyqlUS?usp=sharing&quot;&gt;Colab notebook&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;quickstart&quot;&gt;Quickstart&lt;/h2&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;git clone https://github.com/georgesung/llm_qlora.git
+cd llm_qlora
+pip install -r requirements.txt
+python train.py configs/open_llama_7b_qlora_uncensored.yaml
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;This will run QLoRA training to reproduce the &lt;a href=&quot;https://huggingface.co/georgesung/open_llama_7b_qlora_uncensored&quot;&gt;georgesung/open_llama_7b_qlora_uncensored&lt;/a&gt; model I trained.&lt;/p&gt;
+
+&lt;h2 id=&quot;motivation&quot;&gt;Motivation&lt;/h2&gt;
+&lt;p&gt;After trying out the multitude of LLMs available these days, I wanted to see the possibilities of fine-tuning an LLM myself. With the availability of powerful base LLMs (e.g. LLaMA, Falcon, MPT, etc.) and instruction tuning datasets, along with the development of LoRA and QLoRA, instruction fine-tuning a base model is increasingly accessible to more people/organizations.&lt;/p&gt;
+
+&lt;h2 id=&quot;setup&quot;&gt;Setup&lt;/h2&gt;
+&lt;p&gt;To start playing around with instruction fine-tuning, I decided to use OpenLLaMA-7B as a base model. Since OpenLLaMA is an open source replication of LLaMA, I can leverage much of the code/concepts the community has already done with LLaMA (e.g. when debugging an &lt;a href=&quot;https://github.com/huggingface/transformers/issues/22794#issuecomment-1598977285&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;eos_token&lt;/code&gt; issue&lt;/a&gt;). OpenLLaMA is also permissively licenced via Apache 2.0, so that’s a great bonus. I also chose the 7B model, since I think 7B models are generally powerful enough for many use cases, and not so big that it becomes too slow to experiment on.&lt;/p&gt;
+
+&lt;p&gt;For the instruction tuning dataset, I decided to use &lt;a href=&quot;https://huggingface.co/datasets/ehartford/wizard_vicuna_70k_unfiltered&quot;&gt;ehartford/wizard_vicuna_70k_unfiltered&lt;/a&gt;. I believe this dataset was seeded with ShareGPT data and evolved via &lt;a href=&quot;https://arxiv.org/abs/2304.12244&quot;&gt;Evol-Instruct&lt;/a&gt;. This 70k conversation dataset was then pruned to remove conversations with “As an AI language model…” and moral lecturing, leaving around 35k conversations remaining. Thus, if the instruction fine-tuning is successful, the resulting LLM should not have safety/moral/alignment/etc behavior built-in (so use with care). This opens up avenues for future exploration regarding how to update the model to implement custom alignment behavior, e.g. with further supervised fine-tuning and/or RLAIF/RLHF.&lt;/p&gt;
+
+&lt;p&gt;Finally, I decided to use QLoRA as the fine-tuning algorithm, as I want to see what can be accomplished with relatively accessible hardware. I fine-tuned OpenLLaMA-7B on a 24GB GPU (NVIDIA A10G) with an observed ~14GB GPU memory usage, so one could probably use a GPU with less than 24GB memory. It would be cool to see folks with consumer-grade GPUs fine-tuning 7B+ LLMs on their own PCs! I do note that an RTX 3090 also has 24GB memory 😀&lt;/p&gt;
+
+&lt;h2 id=&quot;concepts&quot;&gt;Concepts&lt;/h2&gt;
+&lt;h1 id=&quot;pre-training-vs-instruction-fine-tuning&quot;&gt;Pre-training vs instruction fine-tuning&lt;/h1&gt;
+&lt;p&gt;From &lt;a href=&quot;https://arxiv.org/abs/2305.11206&quot;&gt;LIMA paper&lt;/a&gt;, almost all the LLM’s knowledge is learned during pre-training. Instruction fine-tuning can help the model follow user instructions to make use of the pre-trained knowledge, and also output text in a particular style. Thus, I don’t expect the LLM to learn any new knowledge from the instruction tuning, but rather learn the “skills” necessary to extract its knowledge from pre-training and provide useful responses.&lt;/p&gt;
+
+&lt;h1 id=&quot;what-is-lora&quot;&gt;What is LoRA?&lt;/h1&gt;
+&lt;p&gt;Very broadly, &lt;a href=&quot;https://arxiv.org/abs/2106.09685&quot;&gt;LoRA&lt;/a&gt; (Low-Rank Adaptation) is an algorithm that allows us to fine-tune a model using very little computational overhead, compared to standard supervised fine-tuning of the entire model. This means we can fine-tune an LLM with lower-end hardware and less training time, compared to standard fine-tuning. Note LoRA can be applied to any model, such as LLMs and image generation models like Stable Diffusion.&lt;/p&gt;
+
+&lt;p&gt;First, we choose the subset of weights in the model we want to fine-tune. For fine-tuning OpenLLaMA, I chose the Q, K, V weight matrices to fine-tune (see &lt;a href=&quot;http://jalammar.github.io/illustrated-transformer/&quot;&gt;The Illustrated Transformer&lt;/a&gt; blog post for more details about Q, K, V). We observe in standard fine-tuning that the fine-tuned weight matrix can be expressed as:&lt;/p&gt;
+
+&lt;p&gt;W = W&lt;sub&gt;0&lt;/sub&gt; + ΔW&lt;/p&gt;
+
+&lt;p&gt;LoRA trains separate parameters/weights to express ΔW, while keeping the original model’s weights W&lt;sub&gt;0&lt;/sub&gt; frozen. To further reduce the trainable parameters, LoRA expresses ΔW as:&lt;/p&gt;
+
+&lt;p&gt;ΔW = A * B&lt;/p&gt;
+
+&lt;p&gt;where A and B are separate learned weight matrices. From LLaMA/OpenLLaMA, the Q, K, V matrices are 4096x4096, so 16M parameters each. In my LoRA config, I set the LoRA rank to 8, which means A is a 4096x8 matrix and B is a 8x4096 matrix (A*B results in a 4096x4096 matrix, representing ΔW). The number of parameters of A and B combined is 65k, which is a 256x reduction in number of parameters compared to the original W&lt;sub&gt;0&lt;/sub&gt; matrix.&lt;/p&gt;
+
+&lt;p&gt;Not only do we get a significant decrease in the number of trainable parameters for each Q, K, V weight matrix, we are also &lt;em&gt;not&lt;/em&gt; training the other weights in the model. Overall, for the fine-tuning I ran using QLoRA on OpenLLaMA, I am only training 0.18% of the total parameters.&lt;/p&gt;
+
+&lt;p&gt;Another cool thing about LoRA is that while we train separate adapters (A and B), we can &lt;em&gt;merge&lt;/em&gt; the adapters back into the base model by simply adding A*B to W&lt;sub&gt;0&lt;/sub&gt; (recall W = W&lt;sub&gt;0&lt;/sub&gt; + ΔW). Thus, after merging the adapters with the base OpenLLaMA model, we can run inference on the merged model the same way we run inference on any LLaMA-family model, with no inference latency penalty.&lt;/p&gt;
+
+&lt;p&gt;For more details about LoRA, I suggest &lt;a href=&quot;https://lightning.ai/pages/community/tutorial/lora-llm/&quot;&gt;this blog post&lt;/a&gt; by Lightning AI, and the original &lt;a href=&quot;https://arxiv.org/abs/2106.09685&quot;&gt;LoRA paper&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h1 id=&quot;what-is-qlora&quot;&gt;What is QLoRA?&lt;/h1&gt;
+&lt;p&gt;&lt;a href=&quot;https://arxiv.org/abs/2305.14314&quot;&gt;QLoRA&lt;/a&gt; expands on LoRA by quantizing the base model to 4 bits during LoRA training. This allows us to run LoRA fine-tuning with a smaller GPU memory footprint. There is much more detail about how this algorithm works (e.g. it dequantizes the 4 bit values to 16 bits just in time for forward/backward pass, double quantization, etc.), and honestly I am still trying to wrap my head around it. In any case, I suggest you read the &lt;a href=&quot;https://arxiv.org/abs/2305.14314&quot;&gt;QLoRA paper&lt;/a&gt; for more detail, and a better explanation 😛&lt;/p&gt;
+
+&lt;h2 id=&quot;implementation&quot;&gt;Implementation&lt;/h2&gt;
+&lt;p&gt;Concepts aside, here is how I ran instruction fine-tuning on OpenLLaMA-7B with QLoRA using HuggingFace.&lt;/p&gt;
+
+&lt;h1 id=&quot;qlora-configuration&quot;&gt;QLoRA configuration&lt;/h1&gt;
+&lt;p&gt;Before we load the base model, we need to set up the quantization settings for QLoRA, to be applied to the base model later.&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;bnb_config&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;BitsAndBytesConfig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;load_in_4bit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;bnb_4bit_use_double_quant&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;bnb_4bit_quant_type&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;nf4&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;bnb_4bit_compute_dtype&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;torch&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bfloat16&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L22&quot;&gt;View code on Github&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Here, we are quantizing the base model using 4 bits, with the 4-bit NormalFloat datatype proposed in the &lt;a href=&quot;https://arxiv.org/abs/2305.14314&quot;&gt;QLoRA paper&lt;/a&gt;. For forward &amp;amp; backward pass computations during training, parameters will be dequantized to &lt;a href=&quot;https://en.wikipedia.org/wiki/Bfloat16_floating-point_format&quot;&gt;16-bit BrainFloat&lt;/a&gt; (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;torch.bfloat16&lt;/code&gt;). We will also use Double Quantization (see QLoRA paper) to save even more memory.&lt;/p&gt;
+
+&lt;h1 id=&quot;load-base-model--tokenizer&quot;&gt;Load base model &amp;amp; tokenizer&lt;/h1&gt;
+&lt;p&gt;Let’s load the base model OpenLLaMA-7B and its corresponding tokenizer.&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;tokenizer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LlamaTokenizer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;from_pretrained&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;openlm-research/open_llama_7b&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;model&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LlamaForCausalLM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;from_pretrained&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;openlm-research/open_llama_7b&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;quantization_config&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bnb_config&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;device_map&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Note the QLoRA config &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;bnb_config&lt;/code&gt; is passed in as the quantization config.&lt;/p&gt;
+
+&lt;p&gt;For LLaMA models, the default tokenizer does not specify a pad token, so make sure we specify one:&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;tokenizer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;add_special_tokens&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;({&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'pad_token'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'[PAD]'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L29&quot;&gt;View code on Github&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Warning:&lt;/em&gt; I see some examples where &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;tokenizer.pad_token = tokenizer.eos_token&lt;/code&gt; is set. &lt;em&gt;Do not do this&lt;/em&gt;. When the model is trained like this, it will never learn to output the eos_token / end-of-sequence token (see &lt;a href=&quot;https://github.com/huggingface/transformers/issues/22794#issuecomment-1598977285&quot;&gt;this Github issue&lt;/a&gt;). This means the model will never stop generating tokens during inference. From my experience, this leads to the model generating an entire simulated conversation between the user and the model, when given just a single instruction.&lt;/p&gt;
+
+&lt;h1 id=&quot;data-pre-processing&quot;&gt;Data pre-processing&lt;/h1&gt;
+&lt;p&gt;The dataset I used was &lt;a href=&quot;https://huggingface.co/datasets/ehartford/wizard_vicuna_70k_unfiltered&quot;&gt;ehartford/wizard_vicuna_70k_unfiltered&lt;/a&gt; available on HuggingFace. Examining the data, it is a collection of conversations, with each conversation structured as such (FYI I made up the conversation below just to illustrate):&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;[
+    {&quot;from&quot;: &quot;human&quot;, &quot;value&quot;: &quot;Hello&quot;},
+    {&quot;from&quot;: &quot;gpt&quot;, &quot;value&quot;: &quot;Hi, how are you?&quot;},
+    {&quot;from&quot;: &quot;human&quot;, &quot;value&quot;: &quot;I'm fine.&quot;},
+    {&quot;from&quot;: &quot;gpt&quot;, &quot;value&quot;: &quot;How can I help you?&quot;},
+    ...
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;To train the model, I need to convert the conversation to a string, so I adopted this common format:&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;### HUMAN:
+Hello
+
+### RESPONSE:
+Hi, how are you?&amp;lt;eos_token&amp;gt;
+
+### HUMAN:
+I'm fine.
+
+### RESPONSE:
+How can I help you?&amp;lt;eos_token&amp;gt;
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Note I added the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;eos_token&lt;/code&gt; after each response, so during inference the model can stop generating tokens after it completes its response.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L134&quot;&gt;View code on Github&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;lora-configuration&quot;&gt;LoRA configuration&lt;/h1&gt;
+&lt;p&gt;Now we can set up the LoRA configuration:&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;config&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LoraConfig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;lora_alpha&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;32&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;target_modules&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;q_proj&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;k_proj&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;v_proj&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;lora_dropout&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;0.05&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;bias&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;none&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;task_type&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;CAUSAL_LM&quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;model&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;get_peft_model&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;base_model&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;As mentioned earlier, I set the LoRA rank &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;r&lt;/code&gt; to 8, and I am tuning the Q, K, and V weight matrices &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;[&quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;]&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L54&quot;&gt;View code on Github&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;run-training-loop&quot;&gt;Run training loop&lt;/h1&gt;
+&lt;p&gt;Now we run the training loop using HuggingFace’s &lt;a href=&quot;https://huggingface.co/docs/transformers/main_classes/trainer&quot;&gt;Trainer&lt;/a&gt;:&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;trainer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;transformers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Trainer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;model&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;model&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;train_dataset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;train&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;transformers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;TrainingArguments&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;per_device_train_batch_size&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;gradient_accumulation_steps&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;warmup_steps&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;num_train_epochs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;learning_rate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;2e-4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;fp16&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;True&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;logging_steps&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;20&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;output_dir&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;trainer_output_dir&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;report_to&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;tensorboard&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;data_collator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;transformers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;DataCollatorForLanguageModeling&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tokenizer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mlm&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;False&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L72&quot;&gt;View code on Github&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Training for one full epoch on the dataset took about 18 hours on an A10G GPU with 24 GB GPU memory.&lt;/p&gt;
+
+&lt;h1 id=&quot;merge-model&quot;&gt;Merge model&lt;/h1&gt;
+&lt;p&gt;After the QLoRA training is complete, we have our trained adapters. Now we can merge the adapters with the base model. I noticed there were some issues with merging the adapter with the 4-bit quantized base model, so I had to reload the base model separately before merging, as such:&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;base_model&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LlamaForCausalLM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;from_pretrained&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;openlm-research/open_llama_7b&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;device_map&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;cpu&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;adapter_save_path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'model_output_dir'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'model_name'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;_adapter&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;model&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PeftModel&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;from_pretrained&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;base_model&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;adapter_save_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;merged_model&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;model&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;merge_and_unload&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;model_save_path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;sa&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'model_output_dir'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'model_name'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;
+&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;merged_model&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;save_pretrained&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;model_save_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tokenizer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;save_pretrained&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;model_save_path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L101&quot;&gt;View code on Github&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;After running some inference on the merged model to see if the output makes sense, I uploaded the model to HuggingFace Hub per the instructions &lt;a href=&quot;https://huggingface.co/docs/hub/repositories-getting-started#terminal&quot;&gt;here&lt;/a&gt;. The merged model is available on the HuggingFace Hub as &lt;a href=&quot;https://huggingface.co/georgesung/open_llama_7b_qlora_uncensored&quot;&gt;georgesung/open_llama_7b_qlora_uncensored&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h1 id=&quot;inference-results&quot;&gt;Inference results&lt;/h1&gt;
+&lt;p&gt;To see some ad-hoc inference results I ran, look at this &lt;a href=&quot;https://colab.research.google.com/drive/1IlpeofYD9EU6dNHyKKObZhIzkBMyqlUS?usp=sharing&quot;&gt;Colab notebook&lt;/a&gt;. I used a T40 GPU in Colab to run inference, and I believe the T40 GPU is available in the free version of Google Colab.&lt;/p&gt;
+
+&lt;p&gt;Feel free to download the model from HuggingFace Hub and experiment yourself!&lt;/p&gt;</content><author><name></name></author><category term="AI" /><summary type="html">TLDR I ran instruction fine-tuning with QLoRA on the OpenLLaMA-7B base model, using the HuggingFace library. I used a ShareGPT-based conversation dataset with the safety guardrails and alignment removed. I ran the training on a 24GB GPU (NVIDIA A10G) for ~18 hours, and the model outputs seem coherent. The trained model is available on HuggingFace Hub here, and the code for model training is available on Github here. Example inference results are available in this Colab notebook.</summary></entry><entry><title type="html">OpenAI vs Open Source LLM Comparison for Document Q&amp;amp;A</title><link href="http://localhost:4000/ai/llm-qa-eval-wikipedia/" rel="alternate" type="text/html" title="OpenAI vs Open Source LLM Comparison for Document Q&amp;amp;A" /><published>2023-05-07T02:00:00+08:00</published><updated>2023-05-07T02:00:00+08:00</updated><id>http://localhost:4000/ai/llm-qa-eval-wikipedia</id><content type="html" xml:base="http://localhost:4000/ai/llm-qa-eval-wikipedia/">&lt;h2 id=&quot;tldr&quot;&gt;TLDR&lt;/h2&gt;
+&lt;p&gt;For simple Wikipedia article Q&amp;amp;A, I compared OpenAI GPT 3.5, FastChat-T5, FLAN-T5-XXL, and FLAN-T5-XL. GPT 3.5 provided the best answers, but FastChat-T5 was very close in performance (with a basic guardrail). The T5 models I tested are all licensed under Apache 2.0, so they are commercially viable.&lt;/p&gt;
+
+&lt;p&gt;For the embedding model, I compared OpenAI text-embedding-ada-002 and the open source INSTRUCTOR-XL models. The INSTRUCTOR-XL model performed better, which is encouraging since INSTRUCTOR-XL is also licensed under Apache 2.0. (&lt;em&gt;Update&lt;/em&gt;: I just noticed both INSTRUCTOR-XL/LARGE models also perform better on the &lt;a href=&quot;https://huggingface.co/spaces/mteb/leaderboard&quot;&gt;MTEB Leaderboard&lt;/a&gt;)&lt;/p&gt;
+
+&lt;p&gt;The code for running these comparisons is available in my &lt;a href=&quot;https://github.com/georgesung/LLM-WikipediaQA&quot;&gt;Github repo&lt;/a&gt;, which includes a link to a Colab notebook and an interactive Gradio app.&lt;/p&gt;
+
+&lt;h2 id=&quot;intro&quot;&gt;Intro&lt;/h2&gt;
+&lt;p&gt;The recent developments in open source LLMs to match ChatGPT have been incredibly exciting. There are great places to try out these new LLMs, e.g. on HuggingFace Spaces. Inspired by &lt;a href=&quot;https://lightning.ai/pages/community/community-discussions/the-ultimate-battle-of-language-models-lit-llama-vs-gpt3.5-vs-bloom-vs/&quot;&gt;The Ultimate Battle of Language Models: Lit-LLaMA vs GPT3.5 vs Bloom vs …&lt;/a&gt;, I wanted to try out different LLMs for Q&amp;amp;A on multiple articles with various questions. I was also particularly interested in commercially viable open source LLMs (so not Llama-based, but I’m curious!), since the use cases for these are broader, e.g. document Q&amp;amp;A/chat on internal company documentation. Thus I decided to try out the following open source LLMs and embedding models, using the OpenAI models as a benchmark:&lt;/p&gt;
+
+&lt;p&gt;LLMs:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://platform.openai.com/docs/models/gpt-3-5&quot;&gt;gpt-3.5-turbo&lt;/a&gt;: OpenAI GPT 3.5&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://huggingface.co/lmsys/fastchat-t5-3b-v1.0&quot;&gt;lmsys/fastchat-t5-3b-v1.0&lt;/a&gt;: FastChat-T5 model (3B), Apache 2.0 license (note it’s trained on ShareGPT data)&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://huggingface.co/google/flan-t5-xl&quot;&gt;google/flan-t5-xl&lt;/a&gt;: FLAN-T5-XL model (3B), Apache 2.0 license&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://huggingface.co/google/flan-t5-xxl&quot;&gt;google/flan-t5-xxl&lt;/a&gt;: FLAN-T5-XXL model (11B), Apache 2.0 license&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Embedding models:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://platform.openai.com/docs/guides/embeddings/what-are-embeddings&quot;&gt;text-embedding-ada-002&lt;/a&gt;: OpenAI’s ada-002 text embedding model&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://huggingface.co/hkunlp/instructor-xl&quot;&gt;hkunlp/instructor-xl&lt;/a&gt;: The &lt;a href=&quot;https://instructor-embedding.github.io/&quot;&gt;INSTRUCTOR-XL&lt;/a&gt; embedding model, Apache 2.0 license&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;There are many more exciting open source + commercially viable models to try out, I just haven’t yet had time to test them 😄&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Note on terminology&lt;/em&gt;: In this blog post I only refer to generative LLMs as “LLMs”, even though large embedding models can also be considered &lt;a href=&quot;https://en.wikipedia.org/wiki/Large_language_model&quot;&gt;“Large Language Models”&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;basic-document-qa-system&quot;&gt;Basic document Q&amp;amp;A system&lt;/h2&gt;
+&lt;p&gt;First, below is the basic Wikipedia article Q&amp;amp;A system I built (&lt;a href=&quot;https://github.com/georgesung/LLM-WikipediaQA&quot;&gt;code&lt;/a&gt;). I used &lt;a href=&quot;https://pypi.org/project/Wikipedia-API/&quot;&gt;Wikipedia-API&lt;/a&gt; to search/retrieve/beautify Wikipedia articles, &lt;a href=&quot;https://python.langchain.com/en/latest/index.html&quot;&gt;LangChain&lt;/a&gt; for the Q&amp;amp;A framework, and OpenAI &amp;amp; &lt;a href=&quot;https://huggingface.co/&quot;&gt;HuggingFace&lt;/a&gt; models for embeddings and LLMs.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Search and index Wikipedia article&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/img/wikiqa_search.svg&quot; alt=&quot;search and index&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Q&amp;amp;A on article&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/img/wikiqa_qa.svg&quot; alt=&quot;question and answer&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;results&quot;&gt;Results&lt;/h2&gt;
+&lt;p&gt;In the results below:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;❌ = incorrect answer&lt;/li&gt;
+  &lt;li&gt;🤔 = partial credit&lt;/li&gt;
+  &lt;li&gt;&lt;em&gt;(no remarks)&lt;/em&gt; = correct answer&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;embeddings-comparison&quot;&gt;Embeddings comparison&lt;/h1&gt;
+&lt;p&gt;In these runs, I compared the embeddings models used to create the embeddings/vectors for semantic search &amp;amp; retrieval of relevant context. I fixed the LLM to OpenAI GPT 3.5, since that is the strongest LLM in these comparisons. I only present the results of two embeddings below – I did try a few other open source embeddings listed &lt;a href=&quot;https://www.sbert.net/docs/pretrained_models.html&quot;&gt;here&lt;/a&gt;, but the results were not good.&lt;/p&gt;
+
+&lt;p&gt;Interestingly, the open source INSTRUCTOR-XL embeddings perform better than the closed source OpenAI ada-002 embeddings.&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Article&lt;/th&gt;
+      &lt;th&gt;Question&lt;/th&gt;
+      &lt;th&gt;hkunlp/instructor-xl&lt;/th&gt;
+      &lt;th&gt;text-embedding-ada-002&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GPT-4&lt;/td&gt;
+      &lt;td&gt;Who created GPT-4?&lt;/td&gt;
+      &lt;td&gt;GPT-4 was created by OpenAI.&lt;/td&gt;
+      &lt;td&gt;GPT-4 was created by OpenAI.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GPT-4&lt;/td&gt;
+      &lt;td&gt;How is GPT-4 better than its predecessors?&lt;/td&gt;
+      &lt;td&gt;According to OpenAI, GPT-4 is “more reliable, creative, and able to handle much more nuanced instructions than GPT-3.5.” It has larger context windows of 8,192 and 32,768 tokens, is a multimodal model that can take images as well as text as input, and can use APIs when instructed to do so. It also introduced the “system message” to gain further control over its tone of voice and task.&lt;/td&gt;
+      &lt;td&gt;GPT-4 is “more reliable, creative, and able to handle much more nuanced instructions than GPT-3.5.” It has larger context windows of 8,192 and 32,768 tokens, a significant improvement over GPT-3.5 and GPT-3, which were limited to 4,096 and 2,049 tokens respectively. It is also a multimodal model that can take images as well as text as input, and can use APIs when instructed to do so.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GPT-4&lt;/td&gt;
+      &lt;td&gt;Who played in the finals?&lt;/td&gt;
+      &lt;td&gt;There is no information provided in the given context to answer this question.&lt;/td&gt;
+      &lt;td&gt;There is no information provided in the context about any finals being played, so it is not possible to answer this question.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Where was the event held? Name the city and country&lt;/td&gt;
+      &lt;td&gt;The event was held in Qatar, with matches played in eight venues across five cities. The opening ceremony took place at the Al Bayt Stadium in Al Khor.&lt;/td&gt;
+      &lt;td&gt;The event was held in Qatar, across five cities. The opening match was held in Al Khor.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Who won the tournament?&lt;/td&gt;
+      &lt;td&gt;Argentina won the tournament.&lt;/td&gt;
+      &lt;td&gt;The context does not provide information on who won the tournament. ❌&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Who played in the finals?&lt;/td&gt;
+      &lt;td&gt;Argentina and France played in the finals.&lt;/td&gt;
+      &lt;td&gt;Argentina and France played in the finals.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Who had the broadcasting rights?&lt;/td&gt;
+      &lt;td&gt;Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish) had the broadcasting rights for the 2022 FIFA World Cup.&lt;/td&gt;
+      &lt;td&gt;Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish) had the broadcasting rights for the 2022 FIFA World Cup in Canada and the United States.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Which two teams qualified for the knock-out round from Group D?&lt;/td&gt;
+      &lt;td&gt;France and Australia qualified for the knock-out round from Group D.&lt;/td&gt;
+      &lt;td&gt;The context does not provide information on which two teams qualified for the knock-out round from Group D. ❌&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;How is GPT-4 better than its predecessors?&lt;/td&gt;
+      &lt;td&gt;There is no information provided about GPT-4 in the given context, so it is not possible to answer this question.&lt;/td&gt;
+      &lt;td&gt;There is no information in the given context about GPT-4 or any comparison with its predecessors.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Diablo IV&lt;/td&gt;
+      &lt;td&gt;What classes are available?&lt;/td&gt;
+      &lt;td&gt;The five classes available in Diablo IV are Barbarian, Sorceress, Druid, Rogue, and Necromancer.&lt;/td&gt;
+      &lt;td&gt;The five classes available in Diablo IV are Barbarian, Sorceress, Druid, Rogue, and Necromancer.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Diablo IV&lt;/td&gt;
+      &lt;td&gt;When is the release date?&lt;/td&gt;
+      &lt;td&gt;The release date for Diablo IV is June 6, 2023.&lt;/td&gt;
+      &lt;td&gt;The release date for Diablo IV is June 6, 2023.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Diablo IV&lt;/td&gt;
+      &lt;td&gt;How is the vanishing gradient issue addressed?&lt;/td&gt;
+      &lt;td&gt;There is no information provided about the vanishing gradient issue in the given context.&lt;/td&gt;
+      &lt;td&gt;There is no information provided about the vanishing gradient issue in the given context.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;How does Stable Diffusion work?&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion is a deep learning, text-to-image model that generates detailed images conditioned on text descriptions. It is a latent diffusion model, a kind of deep generative neural network, and supports the ability to generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output. It also allows the use of prompts to partially alter existing images via inpainting and outpainting. The model weights have been released publicly and it can run on most consumer hardware equipped with a modest GPU with at least 8 GB VRAM.&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion is a deep learning, text-to-image model that generates detailed images conditioned on text descriptions. It is a latent diffusion model, a kind of deep generative neural network, and supports the ability to generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output. It also allows the use of prompts to partially alter existing images via inpainting and outpainting. The model weights have been released publicly and it can run on most consumer hardware equipped with a modest GPU with at least 8 GB VRAM.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;Who created Stable Diffusion?&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion was created by the start-up company Stability AI in collaboration with academic researchers and non-profit organizations.&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion was developed by the start-up company Stability AI in collaboration with academic researchers and non-profit organizations.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;Describe the model architecture&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion uses a latent diffusion model (LDM) architecture developed by the CompVis group at LMU Munich. It consists of three parts: a variational autoencoder (VAE) encoder, a U-Net block composed of a ResNet backbone, and a VAE decoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, while the U-Net block denoises the output from forward diffusion backwards to obtain a latent representation. Finally, the VAE decoder generates the final image by converting the representation back into pixel space. The model can be flexibly conditioned on a string of text, an image, or another modality, and the encoded conditioning data is exposed to denoising U-Nets via a cross-attention mechanism.&lt;/td&gt;
+      &lt;td&gt;The Stable Diffusion model consists of a latent diffusion model (LDM) that includes a variational autoencoder (VAE), U-Net, and an optional text encoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, while Gaussian noise is iteratively applied to the compressed latent representation during forward diffusion. The U-Net block denoises the output from forward diffusion backwards to obtain a latent representation, and the VAE decoder generates the final image by converting the representation back into pixel space. The denoising step can be conditioned on a string of text, an image, or another modality, and the encoded conditioning data is exposed to denoising U-Nets via a cross-attention mechanism. The model was trained on subsets of captioned images using 256 Nvidia A100 GPUs on Amazon Web Services for a total of 150,000 GPU-hours.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;Who played in the finals?&lt;/td&gt;
+      &lt;td&gt;There is no information provided about any finals, so it is not possible to answer this question.&lt;/td&gt;
+      &lt;td&gt;There is no information provided about any finals being played, so it is not possible to answer this question.&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h1 id=&quot;llms-comparison&quot;&gt;LLMs comparison&lt;/h1&gt;
+&lt;p&gt;To compare different LLMs, I fixed the embeddings model to the INSTRUCTOR-XL model, since it performed better in the comparisons above.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Naive comparison&lt;/strong&gt;&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Article&lt;/th&gt;
+      &lt;th&gt;Question&lt;/th&gt;
+      &lt;th&gt;gpt-3.5-turbo&lt;/th&gt;
+      &lt;th&gt;lmsys/fastchat-t5-3b-v1.0&lt;/th&gt;
+      &lt;th&gt;google/flan-t5-xl&lt;/th&gt;
+      &lt;th&gt;google/flan-t5-xxl&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GPT-4&lt;/td&gt;
+      &lt;td&gt;Who created GPT-4?&lt;/td&gt;
+      &lt;td&gt;GPT-4 was created by OpenAI.&lt;/td&gt;
+      &lt;td&gt;OpenAI.&lt;/td&gt;
+      &lt;td&gt;OpenAI&lt;/td&gt;
+      &lt;td&gt;OpenAI&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GPT-4&lt;/td&gt;
+      &lt;td&gt;How is GPT-4 better than its predecessors?&lt;/td&gt;
+      &lt;td&gt;According to OpenAI, GPT-4 is “more reliable, creative, and able to handle much more nuanced instructions than GPT-3.5.” It has larger context windows of 8,192 and 32,768 tokens, is a multimodal model that can take images as well as text as input, and can use APIs when instructed to do so. It also introduced the “system message” to gain further control over its tone of voice and task.&lt;/td&gt;
+      &lt;td&gt;GPT-4 is better than its predecessors in several ways:&lt;br /&gt; * It has a larger context window of 8,192 and 32,768 tokens, which allows it to handle more complex instructions&lt;br /&gt; * It is a multimodal model, which allows it to take images as well as text as input&lt;br /&gt; * It has a system message that allows it to specify its tone of voice and task&lt;br /&gt; * It can use APIs when instructed to do so, which allows it to fulfill requests beyond its normal capabilities&lt;/td&gt;
+      &lt;td&gt;GPT-4 is a multimodal model: it can take images as well as text as input&lt;/td&gt;
+      &lt;td&gt;GPT-4 is a multimodal model: it can take images as well as text as input&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GPT-4&lt;/td&gt;
+      &lt;td&gt;Who played in the finals?&lt;/td&gt;
+      &lt;td&gt;There is no information provided in the given context to answer this question.&lt;/td&gt;
+      &lt;td&gt;Answer: GPT-4 played in the finals. ❌&lt;/td&gt;
+      &lt;td&gt;unanswerable&lt;/td&gt;
+      &lt;td&gt;GPT-4 ❌&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Where was the event held? Name the city and country&lt;/td&gt;
+      &lt;td&gt;The event was held in Qatar, with matches played in eight venues across five cities. The opening ceremony took place at the Al Bayt Stadium in Al Khor.&lt;/td&gt;
+      &lt;td&gt;The event was held in Doha, Qatar. 🤔&lt;/td&gt;
+      &lt;td&gt;Qatar 🤔&lt;/td&gt;
+      &lt;td&gt;Qatar 🤔&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Who won the tournament?&lt;/td&gt;
+      &lt;td&gt;Argentina won the tournament.&lt;/td&gt;
+      &lt;td&gt;Argentina won the tournament.&lt;/td&gt;
+      &lt;td&gt;Argentina&lt;/td&gt;
+      &lt;td&gt;Argentina&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Who played in the finals?&lt;/td&gt;
+      &lt;td&gt;Argentina and France played in the finals.&lt;/td&gt;
+      &lt;td&gt;Argentina and France.&lt;/td&gt;
+      &lt;td&gt;Argentina and France&lt;/td&gt;
+      &lt;td&gt;Argentina and France&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Who had the broadcasting rights?&lt;/td&gt;
+      &lt;td&gt;Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish) had the broadcasting rights for the 2022 FIFA World Cup.&lt;/td&gt;
+      &lt;td&gt;The broadcasting rights for the 2022 FIFA World Cup were held by Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish).&lt;/td&gt;
+      &lt;td&gt;Fox Sports 🤔&lt;/td&gt;
+      &lt;td&gt;Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Which two teams qualified for the knock-out round from Group D?&lt;/td&gt;
+      &lt;td&gt;France and Australia qualified for the knock-out round from Group D.&lt;/td&gt;
+      &lt;td&gt;France and Australia.&lt;/td&gt;
+      &lt;td&gt;France and Australia&lt;/td&gt;
+      &lt;td&gt;France and Australia&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;How is GPT-4 better than its predecessors?&lt;/td&gt;
+      &lt;td&gt;There is no information provided about GPT-4 in the given context, so it is not possible to answer this question.&lt;/td&gt;
+      &lt;td&gt;GPT-4 is better than its predecessors in that it is a more advanced version of the GPT series of games. It has more features and is more advanced than its predecessors. It also has more levels and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels ❌&lt;/td&gt;
+      &lt;td&gt;It is more powerful ❌&lt;/td&gt;
+      &lt;td&gt;It is a more powerful version of GPT-3. ❌&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Diablo IV&lt;/td&gt;
+      &lt;td&gt;What classes are available?&lt;/td&gt;
+      &lt;td&gt;The five classes available in Diablo IV are Barbarian, Sorceress, Druid, Rogue, and Necromancer.&lt;/td&gt;
+      &lt;td&gt;Barbarian, Sorceress, Druid, Rogue, and Necromancer.&lt;/td&gt;
+      &lt;td&gt;Barbarian, Sorceress, Druid, Rogue, and Necromancer&lt;/td&gt;
+      &lt;td&gt;Barbarian, Sorceress, Druid, Rogue, and Necromancer&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Diablo IV&lt;/td&gt;
+      &lt;td&gt;When is the release date?&lt;/td&gt;
+      &lt;td&gt;The release date for Diablo IV is June 6, 2023.&lt;/td&gt;
+      &lt;td&gt;June 6, 2023.&lt;/td&gt;
+      &lt;td&gt;June 6, 2023&lt;/td&gt;
+      &lt;td&gt;June 6, 2023&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Diablo IV&lt;/td&gt;
+      &lt;td&gt;How is the vanishing gradient issue addressed?&lt;/td&gt;
+      &lt;td&gt;There is no information provided about the vanishing gradient issue in the given context.&lt;/td&gt;
+      &lt;td&gt;The vanishing gradient issue is addressed by using a more detailed and realistic texture map for the environment. The texture map is a 3D model of the environment that is used to create the textures for the environment. The texture map is created using a combination of textures from the environment and the player’s character. The texture map is then used to create the textures for the environment. This process is repeated for each texture in the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the ❌&lt;/td&gt;
+      &lt;td&gt;Both Blizzard and Nvidia reported in March 2023 that they were working to resolve the issue. ❌&lt;/td&gt;
+      &lt;td&gt;Blizzard and Nvidia reported in March 2023 that they were working to resolve the issue. ❌&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;How does Stable Diffusion work?&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion is a deep learning, text-to-image model that generates detailed images conditioned on text descriptions using a latent diffusion model, a kind of deep generative neural network. It supports the ability to generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output, and can also be used to partially alter existing images via inpainting and outpainting. Its code and model weights have been released publicly, and it can run on most consumer hardware equipped with a modest GPU with at least 8 GB VRAM.&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion works by using a latent diffusion model, a kind of deep generative neural network, to generate detailed images conditioned on text descriptions. The model can generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output, or existing images can be re-drawn by the model to incorporate new elements described by a text prompt through its diffusion-denoising mechanism. It also allows the use of prompts to partially alter existing images via inpainting and outpainting.&lt;/td&gt;
+      &lt;td&gt;It is primarily used to generate detailed images conditioned on text descriptions, though it can also be applied to other tasks such as inpainting, outpainting, and generating image-to-image translations guided by a text prompt 🤔&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion is a deep learning, text-to-image model released in 2022. It is primarily used to generate detailed images conditioned on text descriptions, though it can also be applied to other tasks such as inpainting, outpainting, and generating image-to-image translations guided by a text prompt. 🤔&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;Who created Stable Diffusion?&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion was created by the start-up company Stability AI in collaboration with academic researchers and non-profit organizations.&lt;/td&gt;
+      &lt;td&gt;The start-up company Stability AI in collaboration with a number of academic researchers and non-profit organizations.&lt;/td&gt;
+      &lt;td&gt;Stability AI&lt;/td&gt;
+      &lt;td&gt;Stability AI&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;Describe the model architecture&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion uses a latent diffusion model (LDM) architecture developed by the CompVis group at LMU Munich. It consists of three parts: a variational autoencoder (VAE) encoder, a U-Net block composed of a ResNet backbone, and a VAE decoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, while the U-Net block denoises the output from forward diffusion backwards to obtain a latent representation. Finally, the VAE decoder generates the final image by converting the representation back into pixel space. The model can be flexibly conditioned on a string of text, an image, or another modality, and the encoded conditioning data is exposed to denoising U-Nets via a cross-attention mechanism.&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion uses a kind of diffusion model (DM), called a latent diffusion model (LDM) developed by the CompVis group at LMU Munich. Introduced in 2015, diffusion models are trained with the objective of removing successive applications of Gaussian noise on training images which can be thought of as a sequence of denoising autoencoders. Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, capturing a more fundamental semantic meaning of the image. Gaussian noise is iteratively applied to the compressed latent representation during forward diffusion. The U-Net block, composed of a ResNet backbone, denoises the output from forward diffusion backwards to obtain a latent representation. Finally, the VAE decoder generates the final image by converting the representation back into pixel space. The denoising step can be flexibly conditioned on a string of text, an image, or another modality. For conditioning on text, the fixed, pretrained CLIP ViT-L/14 text encoder is used to transform text prompts to an embedding space. Researchers point to increased computational efficiency for training and generation as an advantage of LDMs.&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion uses a kind of diffusion model (DM), called a latent diffusion model (LDM) developed by the CompVis group at LMU Munich. Introduced in 2015, diffusion models are trained with the objective of removing successive applications of Gaussian noise on training images which can be thought of as a sequence of denoising autoencoders. Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;Who played in the finals?&lt;/td&gt;
+      &lt;td&gt;There is no information provided about any finals, so it is not possible to answer this question.&lt;/td&gt;
+      &lt;td&gt;I don’t know, I don’t know who played in the finals.&lt;/td&gt;
+      &lt;td&gt;Stability AI ❌&lt;/td&gt;
+      &lt;td&gt;Stability AI ❌&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Overall, OpenAI GPT 3.5 performed the best. Apart from the “trick questions” (questions whose answer should be “I don’t know”), FastChat-T5 came very close to GPT 3.5 for these Q&amp;amp;A tasks. There was some performance gap between FastChat-T5 and the original Flan-T5 models – FastChat-T5 at 3B parameters even performed better than FLAN-T5-XXL at 11B parameters, which speaks to the importance of the training dataset (and/or training duration?).&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;However&lt;/em&gt;, note the answers produced following the “trick questions”, where the question cannot be answered by the context provided. An example would be asking “Who played in the finals?” on the Wikipedia article about GPT-4. The LLM should say the equivalent of “I don’t know”. GPT 3.5 successfully says it doesn’t know given these trick questions, but the open source models tend to make stuff up.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Comparison using question-checking&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Can we just dismiss the open source LLMs from here? Not necessarily. I ran the open source LLMs in a straightforward manner, without any special guardrails. Under the hood, I am guessing OpenAI has created guardrails around the raw GPT 3.5 LLM model, so the results served by the GPT 3.5 API are safe, free of hallucination, non-toxic, etc. Back to answering the trick questions, one simple guardrail I found was to use the LLM itself to determine if a question can be answered given the context.&lt;/p&gt;
+
+&lt;p&gt;In a separate LLM invocation, let’s call it the “question-checking” LLM (as opposed to “question-answering” LLM), we can slightly modify &lt;a href=&quot;https://github.com/hwchase17/langchain/blob/v0.0.160/langchain/chains/retrieval_qa/prompt.py#L4&quot;&gt;LangChain’s default Q&amp;amp;A prompt&lt;/a&gt; to the following:&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&quot;&quot;&quot;Given the following pieces of context, determine if the question is able to be answered by the information in the context.
+Respond with 'yes' or 'no'.
+{context}
+Question: {question}
+&quot;&quot;&quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;The question-checking LLM should respond with “yes” or “no”. If we don’t get a “yes”, we can assume the question cannot be answered, and any response from the question-answering LLM can be ignored, and a simple “I don’t know” can be returned the the user.&lt;/p&gt;
+
+&lt;p&gt;In my &lt;a href=&quot;https://github.com/georgesung/LLM-WikipediaQA/blob/cd6b693959709d2fc6108a000592a9c690bfcabc/WikipediaQA.py#L144&quot;&gt;code&lt;/a&gt;, the question-checking and question-answering LLMs use the same LLM instance, just different prompts. Thus, for an answerable question, the inference latency will involve two calls to the LLM. If latency is an issue, one can load two LLM instances (they don’t even need to be the same type of LLM), and run both question-checking and question-answering LLMs in parallel. Visually, it may look something like this:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/img/wikiqa_guardrail.svg&quot; alt=&quot;question and answer&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The results are much better:&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Article&lt;/th&gt;
+      &lt;th&gt;Question&lt;/th&gt;
+      &lt;th&gt;gpt-3.5-turbo&lt;/th&gt;
+      &lt;th&gt;lmsys/fastchat-t5-3b-v1.0&lt;/th&gt;
+      &lt;th&gt;google/flan-t5-xl&lt;/th&gt;
+      &lt;th&gt;google/flan-t5-xxl&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GPT-4&lt;/td&gt;
+      &lt;td&gt;Who created GPT-4?&lt;/td&gt;
+      &lt;td&gt;GPT-4 was created by OpenAI.&lt;/td&gt;
+      &lt;td&gt;OpenAI.&lt;/td&gt;
+      &lt;td&gt;OpenAI&lt;/td&gt;
+      &lt;td&gt;OpenAI&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GPT-4&lt;/td&gt;
+      &lt;td&gt;How is GPT-4 better than its predecessors?&lt;/td&gt;
+      &lt;td&gt;According to OpenAI, GPT-4 is “more reliable, creative, and able to handle much more nuanced instructions than GPT-3.5.” It has larger context windows of 8,192 and 32,768 tokens, is a multimodal model that can take images as well as text as input, and can use APIs when instructed to do so. It also introduced the “system message” to gain further control over its tone of voice and task.&lt;/td&gt;
+      &lt;td&gt;GPT-4 is better than its predecessors in several ways:&lt;br /&gt; * It has a larger context window of 8,192 and 32,768 tokens, which allows it to handle more complex instructions&lt;br /&gt; * It is a multimodal model, which allows it to take images as well as text as input&lt;br /&gt; * It has a system message that allows it to specify its tone of voice and task&lt;br /&gt; * It can use APIs when instructed to do so, which allows it to fulfill requests beyond its normal capabilities&lt;/td&gt;
+      &lt;td&gt;GPT-4 is a multimodal model: it can take images as well as text as input&lt;/td&gt;
+      &lt;td&gt;GPT-4 is a multimodal model: it can take images as well as text as input&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;GPT-4&lt;/td&gt;
+      &lt;td&gt;Who played in the finals?&lt;/td&gt;
+      &lt;td&gt;There is no information provided in the given context to answer this question.&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Where was the event held? Name the city and country&lt;/td&gt;
+      &lt;td&gt;The event was held in Qatar, with matches played in eight venues across five cities. The opening ceremony took place at the Al Bayt Stadium in Al Khor.&lt;/td&gt;
+      &lt;td&gt;The event was held in Doha, Qatar. 🤔&lt;/td&gt;
+      &lt;td&gt;Qatar 🤔&lt;/td&gt;
+      &lt;td&gt;Qatar 🤔&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Who won the tournament?&lt;/td&gt;
+      &lt;td&gt;Argentina won the tournament.&lt;/td&gt;
+      &lt;td&gt;Argentina won the tournament.&lt;/td&gt;
+      &lt;td&gt;Argentina&lt;/td&gt;
+      &lt;td&gt;Argentina&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Who played in the finals?&lt;/td&gt;
+      &lt;td&gt;Argentina and France played in the finals.&lt;/td&gt;
+      &lt;td&gt;Argentina and France.&lt;/td&gt;
+      &lt;td&gt;Argentina and France&lt;/td&gt;
+      &lt;td&gt;Argentina and France&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Who had the broadcasting rights?&lt;/td&gt;
+      &lt;td&gt;Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish) had the broadcasting rights for the 2022 FIFA World Cup.&lt;/td&gt;
+      &lt;td&gt;The broadcasting rights for the 2022 FIFA World Cup were held by Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish).&lt;/td&gt;
+      &lt;td&gt;Fox Sports 🤔&lt;/td&gt;
+      &lt;td&gt;Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;Which two teams qualified for the knock-out round from Group D?&lt;/td&gt;
+      &lt;td&gt;France and Australia qualified for the knock-out round from Group D.&lt;/td&gt;
+      &lt;td&gt;France and Australia.&lt;/td&gt;
+      &lt;td&gt;I don’t know ❌&lt;/td&gt;
+      &lt;td&gt;France and Australia&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;2022 FIFA World Cup&lt;/td&gt;
+      &lt;td&gt;How is GPT-4 better than its predecessors?&lt;/td&gt;
+      &lt;td&gt;There is no information provided about GPT-4 in the given context, so it is not possible to answer this question.&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Diablo IV&lt;/td&gt;
+      &lt;td&gt;What classes are available?&lt;/td&gt;
+      &lt;td&gt;The five classes available in Diablo IV are Barbarian, Sorceress, Druid, Rogue, and Necromancer.&lt;/td&gt;
+      &lt;td&gt;Barbarian, Sorceress, Druid, Rogue, and Necromancer.&lt;/td&gt;
+      &lt;td&gt;Barbarian, Sorceress, Druid, Rogue, and Necromancer&lt;/td&gt;
+      &lt;td&gt;Barbarian, Sorceress, Druid, Rogue, and Necromancer&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Diablo IV&lt;/td&gt;
+      &lt;td&gt;When is the release date?&lt;/td&gt;
+      &lt;td&gt;The release date for Diablo IV is June 6, 2023.&lt;/td&gt;
+      &lt;td&gt;June 6, 2023.&lt;/td&gt;
+      &lt;td&gt;June 6, 2023&lt;/td&gt;
+      &lt;td&gt;June 6, 2023&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Diablo IV&lt;/td&gt;
+      &lt;td&gt;How is the vanishing gradient issue addressed?&lt;/td&gt;
+      &lt;td&gt;There is no information provided about the vanishing gradient issue in the given context.&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;How does Stable Diffusion work?&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion is a deep learning, text-to-image model that generates detailed images conditioned on text descriptions. It is a latent diffusion model, a kind of deep generative neural network, and supports the ability to generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output. It also allows the use of prompts to partially alter existing images via inpainting and outpainting. Its code and model weights have been released publicly, and it can run on most consumer hardware equipped with a modest GPU with at least 8 GB VRAM.&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion works by using a latent diffusion model, a kind of deep generative neural network, to generate detailed images conditioned on text descriptions. The model can generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output, or existing images can be re-drawn by the model to incorporate new elements described by a text prompt through its diffusion-denoising mechanism. It also allows the use of prompts to partially alter existing images via inpainting and outpainting.&lt;/td&gt;
+      &lt;td&gt;It is primarily used to generate detailed images conditioned on text descriptions, though it can also be applied to other tasks such as inpainting, outpainting, and generating image-to-image translations guided by a text prompt 🤔&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion is a deep learning, text-to-image model released in 2022. It is primarily used to generate detailed images conditioned on text descriptions, though it can also be applied to other tasks such as inpainting, outpainting, and generating image-to-image translations guided by a text prompt. 🤔&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;Who created Stable Diffusion?&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion was created by the start-up company Stability AI in collaboration with academic researchers and non-profit organizations.&lt;/td&gt;
+      &lt;td&gt;The start-up company Stability AI in collaboration with a number of academic researchers and non-profit organizations.&lt;/td&gt;
+      &lt;td&gt;Stability AI&lt;/td&gt;
+      &lt;td&gt;Stability AI&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;Describe the model architecture&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion uses a latent diffusion model (LDM) architecture developed by the CompVis group at LMU Munich. It consists of three parts: a variational autoencoder (VAE) encoder, a U-Net block composed of a ResNet backbone, and a VAE decoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, while the U-Net block denoises the output from forward diffusion backwards to obtain a latent representation. Finally, the VAE decoder generates the final image by converting the representation back into pixel space. The model can be flexibly conditioned on a string of text, an image, or another modality, and the encoded conditioning data is exposed to denoising U-Nets via a cross-attention mechanism.&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion uses a kind of diffusion model (DM), called a latent diffusion model (LDM) developed by the CompVis group at LMU Munich. Introduced in 2015, diffusion models are trained with the objective of removing successive applications of Gaussian noise on training images which can be thought of as a sequence of denoising autoencoders. Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, capturing a more fundamental semantic meaning of the image. Gaussian noise is iteratively applied to the compressed latent representation during forward diffusion. The U-Net block, composed of a ResNet backbone, denoises the output from forward diffusion backwards to obtain a latent representation. Finally, the VAE decoder generates the final image by converting the representation back into pixel space. The denoising step can be flexibly conditioned on a string of text, an image, or another modality. For conditioning on text, the fixed, pretrained CLIP ViT-L/14 text encoder is used to transform text prompts to an embedding space. Researchers point to increased computational efficiency for training and generation as an advantage of LDMs.&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder&lt;/td&gt;
+      &lt;td&gt;Stable Diffusion uses a kind of diffusion model (DM), called a latent diffusion model (LDM) developed by the CompVis group at LMU Munich. Introduced in 2015, diffusion models are trained with the objective of removing successive applications of Gaussian noise on training images which can be thought of as a sequence of denoising autoencoders. Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stable Diffusion&lt;/td&gt;
+      &lt;td&gt;Who played in the finals?&lt;/td&gt;
+      &lt;td&gt;There is no information provided about any finals, so it is not possible to answer this question.&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+      &lt;td&gt;I don’t know&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Now the open source models can admit they don’t know something, instead of making up a silly answer. All the unanswerable questions correctly resulted in “I don’t know” returned from the Q&amp;amp;A system, and all but one answerable question was marked as such. For FLAN-T5-XL, regarding the article “2022 FIFA World Cup” and the question “Which two teams qualified for the knock-out round from Group D?”, the question-checking FLAN-T5-XL determined that the question was unanswerable, when in fact it was answerable given the context. Thus, the performance of different LLMs as the question-checker needs to be considered.&lt;/p&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;For Q&amp;amp;A over individual Wikipedia articles, the open source FastChat-T5 performs almost as well as GPT 3.5, which is very promising. Granted, this was a relatively simple task, and the questions were pretty straightforward. For more complicated Q&amp;amp;A systems, such as over a collection of documents, I think the challenge is not just in the LLM itself, but the overall system design.&lt;/p&gt;
+
+&lt;p&gt;In terms of the embedding models, this is a win for open source, since the INSTRUCTOR-XL embedding model actually performed better than OpenAI’s text-embedding-ada-002 model. This is good news, even for those who wish to use GPT 3.5/4. One can embed their potentially large collection documents offline, which (1) saves cost, and (2) allows their vector datastore to be decoupled from any embeddings updates from 3rd parties (e.g. if OpenAI modifies and/or deprecates ada-002, one must re-index their entire collection of documents).&lt;/p&gt;
+
+&lt;p&gt;Overall, this is a good performance for open source models on single document Q&amp;amp;A tasks, and I’m looking forward to further developments in the open source landscape 🚀&lt;/p&gt;</content><author><name></name></author><category term="AI" /><summary type="html">TLDR For simple Wikipedia article Q&amp;amp;A, I compared OpenAI GPT 3.5, FastChat-T5, FLAN-T5-XXL, and FLAN-T5-XL. GPT 3.5 provided the best answers, but FastChat-T5 was very close in performance (with a basic guardrail). The T5 models I tested are all licensed under Apache 2.0, so they are commercially viable.</summary></entry><entry><title type="html">AI Agents: AutoGPT architecture &amp;amp; breakdown</title><link href="http://localhost:4000/ai/autogpt-arch/" rel="alternate" type="text/html" title="AI Agents: AutoGPT architecture &amp;amp; breakdown" /><published>2023-04-23T05:54:41+08:00</published><updated>2023-04-23T05:54:41+08:00</updated><id>http://localhost:4000/ai/autogpt-arch</id><content type="html" xml:base="http://localhost:4000/ai/autogpt-arch/">&lt;p&gt;Recently I’ve found myself completely hooked experimenting with &lt;a href=&quot;https://github.com/Significant-Gravitas/Auto-GPT&quot;&gt;AutoGPT&lt;/a&gt;, as have many others. Using AutoGPT as a black box, I started getting curious about how it works under the hood. Thankfully the code is open source, so I decided to take a look. The following are my notes on the architecture of AutoGPT. Hopefully this helps those who are curious about how AutoGPT works. Also, AutoGPT can serve as a reference design for those who are building their own agentic AI systems.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Note&lt;/em&gt;: I analyzed the code from &lt;a href=&quot;https://github.com/Significant-Gravitas/Auto-GPT/releases/tag/v0.2.1&quot;&gt;AutoGPT v0.2.1&lt;/a&gt;, which I downloaded a week ago. The information below reflects AutoGPT 0.2.1. At the time of this writing (2023/04/22), AutoGPT v0.2.2 has already been released. Kudos to the incredible progress the community is making!&lt;/p&gt;
+
+&lt;h2 id=&quot;architecture&quot;&gt;Architecture&lt;/h2&gt;
+&lt;p&gt;&lt;img src=&quot;/assets/img/auto_gpt.svg&quot; alt=&quot;block diagram&quot; /&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;workflow&quot;&gt;Workflow&lt;/h1&gt;
+&lt;ol&gt;
+  &lt;li&gt;User (the human) defines the name of the AI agent, and specifies up to 5 goals, e.g. users of AutoGPT will see the following in their terminal (complete example in the Appendix under “&lt;em&gt;Example terminal message for initial user input&lt;/em&gt;”)
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Welcome to Auto-GPT!  Enter the name of your AI and its role below.
+...
+Enter up to 5 goals for your AI:
+...
+Goal 1: ...
+Goal 2: ...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Based on the user’s settings, the initial prompt is generated and sent to the ChatGPT API. The prompt contains the user’s setttings, and overall instructions for ChatGPT. Overall instructions include all available commands, instructions to output results in json, and more. For an example of an initial prompt, see the Appendix “&lt;em&gt;Example initial prompt&lt;/em&gt;”.&lt;/li&gt;
+  &lt;li&gt;ChatGPT returns a json string (ideally), which includes its thoughts, reasoning, plan, and criticism. The json also includes the next command to execute and its arguments. For an example of a json string returned by ChatGPT, see the Appendix “&lt;em&gt;Example json string returned by ChatGPT&lt;/em&gt;”.&lt;/li&gt;
+  &lt;li&gt;The command is extracted and parsed from ChatGPT’s response. If the shut down / &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;task_complete&lt;/code&gt; command was issued, then the system shuts down. Else, the appropriate command executor executes the command with the given arguments.&lt;/li&gt;
+  &lt;li&gt;The executed command returns a string value. For example, the Google search command would return the search results, the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;browse_website&lt;/code&gt; command would return a summary of the scraped website contents, the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;write_to_file&lt;/code&gt; would return the status of writing to a file, etc.&lt;/li&gt;
+  &lt;li&gt;The ChatGPT output (4) and command return string (5) are combined, to be added to memory&lt;/li&gt;
+  &lt;li&gt;The context from (6) is added to short-term memory, stored as text only. This could be implemented using queue/FIFO data structure. &lt;em&gt;In AutoGPT 0.2.1, the full message history is stored, but only the first 9 ChatGPT messages / command return strings are selected as short-term memory.&lt;/em&gt;&lt;/li&gt;
+  &lt;li&gt;The context from (6) is also added to long-term memory. The general idea is we want a collection of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;(vector, text)&lt;/code&gt; pairs, and the ability to execute a &lt;a href=&quot;https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm&quot;&gt;KNN&lt;/a&gt;/approximate-KNN search to find the top-K most similar items from a given query. To get the text embeddings/vectors, we use OpenAI’s ada-002 embeddings API. To store the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;(vector, text)&lt;/code&gt; pairs, we can use local memory (e.g. &lt;a href=&quot;https://huggingface.co/learn/nlp-course/chapter5/6&quot;&gt;FAISS&lt;/a&gt;), or even a scalable &lt;a href=&quot;https://www.pinecone.io/learn/vector-database/&quot;&gt;vector database&lt;/a&gt; like Pinecone. &lt;em&gt;AutoGPT 0.2.1 supports Pinecone, local datastore, and more. I used the local storage option, which writes the embedding vectors to disk in plain-text format.&lt;/em&gt;&lt;/li&gt;
+  &lt;li&gt;Given the most recent context from the short-term memory (7), query the long-term memory from (8) to get the top-K most relevant pieces of memory (&lt;em&gt;K=10 for AutoGPT 0.2.1&lt;/em&gt;). The top-K most relevant memories are added to the prompt, under &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;{relevant memory}&lt;/code&gt; in the diagram. For an example prompt that includes memories, see the Appendix “&lt;em&gt;Example prompt with memories&lt;/em&gt;”. The memories are added under “This reminds you of events from your past”.&lt;/li&gt;
+  &lt;li&gt;A new prompt is constructed, with the same instructions from the initial prompt (2), the relevant memories from (9), and an instruction at the end to “GENERATE NEXT COMMAND JSON” (see the Appendix “&lt;em&gt;Example prompt with memories&lt;/em&gt;”). This new prompt is used to call ChatGPT, and steps (3) through (10) are repeated until the task is complete, i.e. ChatGPT issues the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;task_complete&lt;/code&gt; / shut down command.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;commands&quot;&gt;Commands&lt;/h2&gt;
+&lt;p&gt;One fascinating and very powerful aspect of agentic AI is its ability to issue and execute commands. In AutoGPT, the LLM system (ChatGPT) is made aware of the available commands and their functionality via the following text in the prompt:&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Commands:
+1. Google Search: &quot;google&quot;, args: &quot;input&quot;: &quot;&amp;lt;search&amp;gt;&quot;
+2. Browse Website: &quot;browse_website&quot;, args: &quot;url&quot;: &quot;&amp;lt;url&amp;gt;&quot;, &quot;question&quot;: &quot;&amp;lt;what_you_want_to_find_on_website&amp;gt;&quot;
+3. Start GPT Agent: &quot;start_agent&quot;, args: &quot;name&quot;: &quot;&amp;lt;name&amp;gt;&quot;, &quot;task&quot;: &quot;&amp;lt;short_task_desc&amp;gt;&quot;, &quot;prompt&quot;: &quot;&amp;lt;prompt&amp;gt;&quot;
+4. Message GPT Agent: &quot;message_agent&quot;, args: &quot;key&quot;: &quot;&amp;lt;key&amp;gt;&quot;, &quot;message&quot;: &quot;&amp;lt;message&amp;gt;&quot;
+5. List GPT Agents: &quot;list_agents&quot;, args: 
+6. Delete GPT Agent: &quot;delete_agent&quot;, args: &quot;key&quot;: &quot;&amp;lt;key&amp;gt;&quot;
+7. Clone Repository: &quot;clone_repository&quot;, args: &quot;repository_url&quot;: &quot;&amp;lt;url&amp;gt;&quot;, &quot;clone_path&quot;: &quot;&amp;lt;directory&amp;gt;&quot;
+8. Write to file: &quot;write_to_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;, &quot;text&quot;: &quot;&amp;lt;text&amp;gt;&quot;
+9. Read file: &quot;read_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+10. Append to file: &quot;append_to_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;, &quot;text&quot;: &quot;&amp;lt;text&amp;gt;&quot;
+11. Delete file: &quot;delete_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+12. Search Files: &quot;search_files&quot;, args: &quot;directory&quot;: &quot;&amp;lt;directory&amp;gt;&quot;
+13. Evaluate Code: &quot;evaluate_code&quot;, args: &quot;code&quot;: &quot;&amp;lt;full_code_string&amp;gt;&quot;
+14. Get Improved Code: &quot;improve_code&quot;, args: &quot;suggestions&quot;: &quot;&amp;lt;list_of_suggestions&amp;gt;&quot;, &quot;code&quot;: &quot;&amp;lt;full_code_string&amp;gt;&quot;
+15. Write Tests: &quot;write_tests&quot;, args: &quot;code&quot;: &quot;&amp;lt;full_code_string&amp;gt;&quot;, &quot;focus&quot;: &quot;&amp;lt;list_of_focus_areas&amp;gt;&quot;
+16. Execute Python File: &quot;execute_python_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+17. Generate Image: &quot;generate_image&quot;, args: &quot;prompt&quot;: &quot;&amp;lt;prompt&amp;gt;&quot;
+18. Send Tweet: &quot;send_tweet&quot;, args: &quot;text&quot;: &quot;&amp;lt;text&amp;gt;&quot;
+19. Convert Audio to text: &quot;read_audio_from_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+20. Do Nothing: &quot;do_nothing&quot;, args: 
+21. Task Complete (Shutdown): &quot;task_complete&quot;, args: &quot;reason&quot;: &quot;&amp;lt;reason&amp;gt;&quot;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Each command has a short description (e.g. “Google Search”, “Execute Python File”, etc.) so ChatGPT knows which command to select given the current context. Further, each command has its own executor in AutoGPT.&lt;/p&gt;
+
+&lt;p&gt;I find this a very powerful concept, since one can extend the suite of commands available, which opens up many possibilities. For example, if we had a command to add products to the shopping cart of an online retailer, we can specify an objective to (1) find tennis strings most suitable for a topspin baseline player, and (2) add that string to the user’s shopping cart. One can also extend commands to the physical world, such as smart home controls. Of course, it is very important to prioritize safety, as these LLM-based autonomous agents are still in their early days of development!&lt;/p&gt;
+
+&lt;h2 id=&quot;appendix&quot;&gt;Appendix&lt;/h2&gt;
+&lt;h1 id=&quot;example-terminal-message-for-initial-user-input&quot;&gt;Example terminal message for initial user input&lt;/h1&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Welcome to Auto-GPT!  Enter the name of your AI and its role below. Entering nothing will load defaults.
+Name your AI:  For example, 'Entrepreneur-GPT'
+AI Name: Foo
+Foo here!  I am at your service.
+Describe your AI's role:  For example, 'an AI designed to autonomously develop and run businesses with the sole goal of increasing your net worth.'
+Foo is: an AI that recommends tennis equipment for a specific player
+Enter up to 5 goals for your AI:  For example: Increase net worth, Grow Twitter Account, Develop and manage multiple businesses autonomously'
+Enter nothing to load defaults, enter nothing when finished.
+Goal 1: Find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin
+Goal 2: Write the tennis strings to output
+Goal 3: Shut down when you are done
+Goal 4: 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;how-chatcompletions-messages-are-printed&quot;&gt;How ChatCompletions messages are printed&lt;/h1&gt;
+&lt;p&gt;AutoGPT uses OpenAI’s &lt;a href=&quot;https://platform.openai.com/docs/guides/chat/introduction&quot;&gt;ChatCompletion&lt;/a&gt;, which expects a list of dicts that represents the chat history. For visual clarify, I have printed out the prompts that go into ChatGPT as a string. For example:&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;messages&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;role&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;system&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;content&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;foo&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;role&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;user&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;content&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;bar1&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;role&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;assistant&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;content&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;bar2&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;will be printed as:&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;system: foo
+
+user: bar1
+
+assistant: bar2
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;example-initial-prompt&quot;&gt;Example initial prompt&lt;/h1&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;system: You are Foo, an AI that recommends tennis equipment for a specific player
+Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies with no legal complications.
+
+GOALS:
+
+1. Find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin
+2. Write the tennis strings to output
+3. Shut down when you are done
+
+
+Constraints:
+1. ~4000 word limit for short term memory. Your short term memory is short, so immediately save important information to files.
+2. If you are unsure how you previously did something or want to recall past events, thinking about similar events will help you remember.
+3. No user assistance
+4. Exclusively use the commands listed in double quotes e.g. &quot;command name&quot;
+
+Commands:
+1. Google Search: &quot;google&quot;, args: &quot;input&quot;: &quot;&amp;lt;search&amp;gt;&quot;
+2. Browse Website: &quot;browse_website&quot;, args: &quot;url&quot;: &quot;&amp;lt;url&amp;gt;&quot;, &quot;question&quot;: &quot;&amp;lt;what_you_want_to_find_on_website&amp;gt;&quot;
+3. Start GPT Agent: &quot;start_agent&quot;, args: &quot;name&quot;: &quot;&amp;lt;name&amp;gt;&quot;, &quot;task&quot;: &quot;&amp;lt;short_task_desc&amp;gt;&quot;, &quot;prompt&quot;: &quot;&amp;lt;prompt&amp;gt;&quot;
+4. Message GPT Agent: &quot;message_agent&quot;, args: &quot;key&quot;: &quot;&amp;lt;key&amp;gt;&quot;, &quot;message&quot;: &quot;&amp;lt;message&amp;gt;&quot;
+5. List GPT Agents: &quot;list_agents&quot;, args: 
+6. Delete GPT Agent: &quot;delete_agent&quot;, args: &quot;key&quot;: &quot;&amp;lt;key&amp;gt;&quot;
+7. Clone Repository: &quot;clone_repository&quot;, args: &quot;repository_url&quot;: &quot;&amp;lt;url&amp;gt;&quot;, &quot;clone_path&quot;: &quot;&amp;lt;directory&amp;gt;&quot;
+8. Write to file: &quot;write_to_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;, &quot;text&quot;: &quot;&amp;lt;text&amp;gt;&quot;
+9. Read file: &quot;read_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+10. Append to file: &quot;append_to_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;, &quot;text&quot;: &quot;&amp;lt;text&amp;gt;&quot;
+11. Delete file: &quot;delete_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+12. Search Files: &quot;search_files&quot;, args: &quot;directory&quot;: &quot;&amp;lt;directory&amp;gt;&quot;
+13. Evaluate Code: &quot;evaluate_code&quot;, args: &quot;code&quot;: &quot;&amp;lt;full_code_string&amp;gt;&quot;
+14. Get Improved Code: &quot;improve_code&quot;, args: &quot;suggestions&quot;: &quot;&amp;lt;list_of_suggestions&amp;gt;&quot;, &quot;code&quot;: &quot;&amp;lt;full_code_string&amp;gt;&quot;
+15. Write Tests: &quot;write_tests&quot;, args: &quot;code&quot;: &quot;&amp;lt;full_code_string&amp;gt;&quot;, &quot;focus&quot;: &quot;&amp;lt;list_of_focus_areas&amp;gt;&quot;
+16. Execute Python File: &quot;execute_python_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+17. Generate Image: &quot;generate_image&quot;, args: &quot;prompt&quot;: &quot;&amp;lt;prompt&amp;gt;&quot;
+18. Send Tweet: &quot;send_tweet&quot;, args: &quot;text&quot;: &quot;&amp;lt;text&amp;gt;&quot;
+19. Convert Audio to text: &quot;read_audio_from_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+20. Do Nothing: &quot;do_nothing&quot;, args: 
+21. Task Complete (Shutdown): &quot;task_complete&quot;, args: &quot;reason&quot;: &quot;&amp;lt;reason&amp;gt;&quot;
+
+Resources:
+1. Internet access for searches and information gathering.
+2. Long Term memory management.
+3. GPT-3.5 powered Agents for delegation of simple tasks.
+4. File output.
+
+Performance Evaluation:
+1. Continuously review and analyze your actions to ensure you are performing to the best of your abilities.
+2. Constructively self-criticize your big-picture behavior constantly.
+3. Reflect on past decisions and strategies to refine your approach.
+4. Every command has a cost, so be smart and efficient. Aim to complete tasks in the least number of steps.
+
+You should only respond in JSON format as described below 
+Response Format: 
+{
+    &quot;thoughts&quot;: {
+        &quot;text&quot;: &quot;thought&quot;,
+        &quot;reasoning&quot;: &quot;reasoning&quot;,
+        &quot;plan&quot;: &quot;- short bulleted\n- list that conveys\n- long-term plan&quot;,
+        &quot;criticism&quot;: &quot;constructive self-criticism&quot;,
+        &quot;speak&quot;: &quot;thoughts summary to say to user&quot;
+    },
+    &quot;command&quot;: {
+        &quot;name&quot;: &quot;command name&quot;,
+        &quot;args&quot;: {
+            &quot;arg name&quot;: &quot;value&quot;
+        }
+    }
+} 
+Ensure the response can be parsed by Python json.loads
+system: The current time and date is Sat Apr 22 01:43:22 2023
+system: This reminds you of these events from your past:
+
+
+
+user: Determine which next command to use, and respond using the format specified above:
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;example-json-string-returned-by-chatgpt&quot;&gt;Example json string returned by ChatGPT&lt;/h1&gt;
+&lt;div class=&quot;language-json highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;thoughts&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+        &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;text&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;I need to find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin. I should start by doing some research on the topic.&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+        &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;reasoning&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;I need to gather information on the characteristics of tennis strings that are suitable for a hard hitting baseline player who hits with a lot of topspin. This will help me narrow down my search and find the top 3 most suitable options.&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+        &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;plan&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;- Conduct a Google search on the topic&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;- Browse websites that specialize in tennis equipment&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;- Consult with a GPT agent if necessary&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+        &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;criticism&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;I need to make sure that I am gathering information from reliable sources and that I am considering all relevant factors when making my recommendations.&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+        &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;speak&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;I will conduct a Google search on the topic and browse websites that specialize in tennis equipment to find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin.&quot;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;command&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+        &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;name&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;google&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+        &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;args&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+            &lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;&quot;input&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;best tennis strings for hard hitting baseline player with topspin&quot;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+        &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+    &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;example-prompt-with-memories&quot;&gt;Example prompt with memories&lt;/h1&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;system: You are Foo, an AI that recommends tennis equipment for a specific player
+Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies with no legal complications.
+
+GOALS:
+
+1. Find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin
+2. Write the tennis strings to output
+3. Shut down when you are done
+
+
+Constraints:
+1. ~4000 word limit for short term memory. Your short term memory is short, so immediately save important information to files.
+2. If you are unsure how you previously did something or want to recall past events, thinking about similar events will help you remember.
+3. No user assistance
+4. Exclusively use the commands listed in double quotes e.g. &quot;command name&quot;
+
+Commands:
+1. Google Search: &quot;google&quot;, args: &quot;input&quot;: &quot;&amp;lt;search&amp;gt;&quot;
+2. Browse Website: &quot;browse_website&quot;, args: &quot;url&quot;: &quot;&amp;lt;url&amp;gt;&quot;, &quot;question&quot;: &quot;&amp;lt;what_you_want_to_find_on_website&amp;gt;&quot;
+3. Start GPT Agent: &quot;start_agent&quot;, args: &quot;name&quot;: &quot;&amp;lt;name&amp;gt;&quot;, &quot;task&quot;: &quot;&amp;lt;short_task_desc&amp;gt;&quot;, &quot;prompt&quot;: &quot;&amp;lt;prompt&amp;gt;&quot;
+4. Message GPT Agent: &quot;message_agent&quot;, args: &quot;key&quot;: &quot;&amp;lt;key&amp;gt;&quot;, &quot;message&quot;: &quot;&amp;lt;message&amp;gt;&quot;
+5. List GPT Agents: &quot;list_agents&quot;, args: 
+6. Delete GPT Agent: &quot;delete_agent&quot;, args: &quot;key&quot;: &quot;&amp;lt;key&amp;gt;&quot;
+7. Clone Repository: &quot;clone_repository&quot;, args: &quot;repository_url&quot;: &quot;&amp;lt;url&amp;gt;&quot;, &quot;clone_path&quot;: &quot;&amp;lt;directory&amp;gt;&quot;
+8. Write to file: &quot;write_to_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;, &quot;text&quot;: &quot;&amp;lt;text&amp;gt;&quot;
+9. Read file: &quot;read_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+10. Append to file: &quot;append_to_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;, &quot;text&quot;: &quot;&amp;lt;text&amp;gt;&quot;
+11. Delete file: &quot;delete_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+12. Search Files: &quot;search_files&quot;, args: &quot;directory&quot;: &quot;&amp;lt;directory&amp;gt;&quot;
+13. Evaluate Code: &quot;evaluate_code&quot;, args: &quot;code&quot;: &quot;&amp;lt;full_code_string&amp;gt;&quot;
+14. Get Improved Code: &quot;improve_code&quot;, args: &quot;suggestions&quot;: &quot;&amp;lt;list_of_suggestions&amp;gt;&quot;, &quot;code&quot;: &quot;&amp;lt;full_code_string&amp;gt;&quot;
+15. Write Tests: &quot;write_tests&quot;, args: &quot;code&quot;: &quot;&amp;lt;full_code_string&amp;gt;&quot;, &quot;focus&quot;: &quot;&amp;lt;list_of_focus_areas&amp;gt;&quot;
+16. Execute Python File: &quot;execute_python_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+17. Generate Image: &quot;generate_image&quot;, args: &quot;prompt&quot;: &quot;&amp;lt;prompt&amp;gt;&quot;
+18. Send Tweet: &quot;send_tweet&quot;, args: &quot;text&quot;: &quot;&amp;lt;text&amp;gt;&quot;
+19. Convert Audio to text: &quot;read_audio_from_file&quot;, args: &quot;file&quot;: &quot;&amp;lt;file&amp;gt;&quot;
+20. Do Nothing: &quot;do_nothing&quot;, args: 
+21. Task Complete (Shutdown): &quot;task_complete&quot;, args: &quot;reason&quot;: &quot;&amp;lt;reason&amp;gt;&quot;
+
+Resources:
+1. Internet access for searches and information gathering.
+2. Long Term memory management.
+3. GPT-3.5 powered Agents for delegation of simple tasks.
+4. File output.
+
+Performance Evaluation:
+1. Continuously review and analyze your actions to ensure you are performing to the best of your abilities.
+2. Constructively self-criticize your big-picture behavior constantly.
+3. Reflect on past decisions and strategies to refine your approach.
+4. Every command has a cost, so be smart and efficient. Aim to complete tasks in the least number of steps.
+
+You should only respond in JSON format as described below 
+Response Format: 
+{
+    &quot;thoughts&quot;: {
+        &quot;text&quot;: &quot;thought&quot;,
+        &quot;reasoning&quot;: &quot;reasoning&quot;,
+        &quot;plan&quot;: &quot;- short bulleted\n- list that conveys\n- long-term plan&quot;,
+        &quot;criticism&quot;: &quot;constructive self-criticism&quot;,
+        &quot;speak&quot;: &quot;thoughts summary to say to user&quot;
+    },
+    &quot;command&quot;: {
+        &quot;name&quot;: &quot;command name&quot;,
+        &quot;args&quot;: {
+            &quot;arg name&quot;: &quot;value&quot;
+        }
+    }
+} 
+Ensure the response can be parsed by Python json.loads
+system: The current time and date is Sat Apr 22 13:47:07 2023
+system: This reminds you of these events from your past:
+['Assistant Reply: {\n    &quot;thoughts&quot;: {\n        &quot;text&quot;: &quot;I need to find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin. I should start by doing some research on the topic.&quot;,\n        &quot;reasoning&quot;: &quot;I need to gather information on the characteristics of tennis strings that are suitable for a hard hitting baseline player who hits with a lot of topspin. This will help me narrow down my search and find the top 3 most suitable options.&quot;,\n        &quot;plan&quot;: &quot;- Conduct a Google search on the topic\\n- Browse websites that specialize in tennis equipment\\n- Consult with a GPT agent if necessary&quot;,\n        &quot;criticism&quot;: &quot;I need to make sure that I am gathering information from reliable sources and that I am considering all relevant factors when making my recommendations.&quot;,\n        &quot;speak&quot;: &quot;I will conduct a Google search on the topic and browse websites that specialize in tennis equipment to find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin.&quot;\n    },\n    &quot;command&quot;: {\n        &quot;name&quot;: &quot;google&quot;,\n        &quot;args&quot;: {\n            &quot;input&quot;: &quot;best tennis strings for hard hitting baseline player with topspin&quot;\n        }\n    }\n} \nResult: Command google returned: b\'[\\n    {\\n        &quot;title&quot;: &quot;Best Tennis Strings in 2023 - For Spin, Power, Control - Athlete Path&quot;,\\n        &quot;href&quot;: &quot;https://www.athletepath.com/best-tennis-strings/&quot;,\\n        &quot;body&quot;: &quot;Wilson Champions Choice Duo Tennis String Babolat RPM Blast Black 17g Strings Solinco Hyper-G Heaven High Spin Poly String Head Rip Control Tennis String Wilson NXT String Tourna Big Hitter Black7 Luxilion ALU Power 125 Tennis Racquet String Set How to Choose Tennis Strings Types of Tennis Strings Important Features to Consider Conclusion&quot;\\n    },\\n    {\\n        &quot;title&quot;: &quot;Best tennis strings of 2022 | TW gear guide - Tennis Warehouse&quot;,\\n        &quot;href&quot;: &quot;https://www.tennis-warehouse.com/learning_center/gear_guides/tennis_string/best_tennis_strings.html&quot;,\\n        &quot;body&quot;: &quot;Wilson Champion\\\'s Choice Hybrid 16 String 5.0 3 Reviews $ 41.95 Quantity: 1 Increment Add To Cart Wish list TW Reviews Price Icon Lowest Price Guarantee Arrow Up We will match or beat any posted overall price advertised in-store or online on in stock items. Shop Hybrids Best strings by playing feature (benefit)&quot;\\n    },\\n    {\\n        &quot;title&quot;: &quot;11 Best Tennis Strings For Spin - A Complete Guide&quot;,\\n        &quot;href&quot;: &quot;https://tennispredict.com/11-best-tennis-strings-for-spin/&quot;,\\n        &quot;body&quot;: &quot;These are the 11 best tennis strings for spin. Babolat RPM Blast Luxilon ALU Power Spin Solinco Tour Bite 19 Technifiber Black Code 4S 16 Volkl Cyclone 16 Kirschbaum Xplosive Speed 16 Wilson Revolve Spin 16 Turna Poly Big Hitter Black 7 Gamma AMP Moto 16 Head Sonic Pro Edge 16 Yonex Poly Tour Spin&quot;\\n    },\\n    {\\n        &quot;title&quot;: &quot;10+ Best Tennis Strings for 2023 | Playtested &amp;amp; Reviewed&quot;,\\n        &quot;href&quot;: &quot;https://tenniscompanion.org/best-tennis-strings/&quot;,\\n        &quot;body&quot;: &quot;My pick for the best synthetic gut tennis string, which I cover in greater detail in this guide, is Prince Synthetic Gut. It\\\'s an excellent string with a long-standing positive reputation in the tennis community. Here are a few additional options to consider for beginners and children. Head Synthetic Gut PPS Gamma Synthetic Gut&quot;\\n    },\\n    {\\n        &quot;title&quot;: &quot;Best Tennis Strings for Topspin&quot;,\\n        &quot;href&quot;: &quot;https://primotennis.com/best-tennis-strings-for-topspin/&quot;,\\n        &quot;body&quot;: &quot;Finding the sweet spot is key! The best string tension for topspin is around 50-60 pounds (23-27 kg). This provides enough power and control while still allowing the ball to bite into the string bed for maximum spin potential. If you find that your strings are breaking too frequently, you may want to increase the tension slightly.&quot;\\n    },\\n    {\\n        &quot;title&quot;: &quot;12 Best Tennis Strings With Buying Guide 2023 - Tennisscan&quot;,\\n        &quot;href&quot;: &quot;https://tennisscan.com/best-tennis-strings/&quot;,\\n        &quot;body&quot;: &quot;Wilson Champions Choice is a cross between Wilson Natural Gut and Luxilon ALU Power Rough, two of the most popular strings on tour. The player gets the best of both worlds by combining the optimum playability of a high-quality. Use the Luxilon ALU Power Rough for durability and control in the mains.&quot;\\n    },\\n    {\\n        &quot;title&quot;: &quot;Most Spin-Friendly Strings - Tennis Warehouse&quot;,\\n        &quot;href&quot;: &quot;https://www.tennis-warehouse.com/learning_center/gear_guides/tennis_string/best_spin_strings.html&quot;,\\n        &quot;body&quot;: &quot;It also provides a low-powered response, which allows big hitters to play with confidence. Read the full review. Weiss CANNON Ultra Cable 17 Yellow/1.23 String. $12.90. 3. Weiss CANNON Ultra Cable 17/1.23 String White. $12.90. 3. Weiss CANNON Ultra Cable 17 Ye/1.23 String Reel - 660\\\'.&quot;\\n    },\\n    {\\n        &quot;title&quot;: &quot;The Best Tennis Strings - The Tennis Bros&quot;,\\n        &quot;href&quot;: &quot;https://thetennisbros.com/reviews/strings/the-best-tennis-strings/&quot;,\\n        &quot;body&quot;: &quot;Natural gut is the most powerful, most elastic string on the planet and is loved by professional and amateur players alike. It\\\'s created from cow intestine that is twisted into a string format in a factory, coated and then sold in a packet. Its touch on the tennis court is heavenly and it feels like velvet on the arm.&quot;\\n    }\\n]\' \nHuman Feedback: GENERATE NEXT COMMAND JSON ']
+
+
+user: GENERATE NEXT COMMAND JSON
+assistant: {
+    &quot;thoughts&quot;: {
+        &quot;text&quot;: &quot;Based on my research, I have found some tennis strings that are suitable for a hard hitting baseline player with topspin. I will now write these strings to output and shut down.&quot;,
+        &quot;reasoning&quot;: &quot;I have completed my research and found the information I need to make my recommendations. Writing the strings to output will allow the user to see my recommendations and shut down will end this task.&quot;,
+        &quot;plan&quot;: &quot;- Write the top 3 most suitable tennis strings to output\n- Shut down&quot;,
+        &quot;criticism&quot;: &quot;I need to make sure that I am providing accurate and helpful information to the user. I should also consider providing additional information on why these strings are suitable for a hard hitting baseline player with topspin.&quot;,
+        &quot;speak&quot;: &quot;Based on my research, I have found some tennis strings that are suitable for a hard hitting baseline player with topspin. I will now write these strings to output and shut down.&quot;
+    },
+    &quot;command&quot;: {
+        &quot;name&quot;: &quot;write_to_file&quot;,
+        &quot;args&quot;: {
+            &quot;file&quot;: &quot;recommended_strings.txt&quot;,
+            &quot;text&quot;: &quot;1. Babolat RPM Blast\n2. Solinco Tour Bite\n3. Luxilon ALU Power Spin&quot;
+        }
+    }
+}
+system: Command write_to_file returned: File written to successfully.
+user: GENERATE NEXT COMMAND JSON
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name></name></author><category term="AI" /><summary type="html">Recently I’ve found myself completely hooked experimenting with AutoGPT, as have many others. Using AutoGPT as a black box, I started getting curious about how it works under the hood. Thankfully the code is open source, so I decided to take a look. The following are my notes on the architecture of AutoGPT. Hopefully this helps those who are curious about how AutoGPT works. Also, AutoGPT can serve as a reference design for those who are building their own agentic AI systems.</summary></entry></feed>

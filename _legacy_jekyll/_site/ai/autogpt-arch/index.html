@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>AI Agents: AutoGPT architecture &amp; breakdown | Jou-ching (George) Sung</title>
+<meta name="generator" content="Jekyll v3.9.3" />
+<meta property="og:title" content="AI Agents: AutoGPT architecture &amp; breakdown" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Recently I’ve found myself completely hooked experimenting with AutoGPT, as have many others. Using AutoGPT as a black box, I started getting curious about how it works under the hood. Thankfully the code is open source, so I decided to take a look. The following are my notes on the architecture of AutoGPT. Hopefully this helps those who are curious about how AutoGPT works. Also, AutoGPT can serve as a reference design for those who are building their own agentic AI systems." />
+<meta property="og:description" content="Recently I’ve found myself completely hooked experimenting with AutoGPT, as have many others. Using AutoGPT as a black box, I started getting curious about how it works under the hood. Thankfully the code is open source, so I decided to take a look. The following are my notes on the architecture of AutoGPT. Hopefully this helps those who are curious about how AutoGPT works. Also, AutoGPT can serve as a reference design for those who are building their own agentic AI systems." />
+<link rel="canonical" href="http://localhost:4000/ai/autogpt-arch/" />
+<meta property="og:url" content="http://localhost:4000/ai/autogpt-arch/" />
+<meta property="og:site_name" content="Jou-ching (George) Sung" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-04-23T05:54:41+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="AI Agents: AutoGPT architecture &amp; breakdown" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2023-04-23T05:54:41+08:00","datePublished":"2023-04-23T05:54:41+08:00","description":"Recently I’ve found myself completely hooked experimenting with AutoGPT, as have many others. Using AutoGPT as a black box, I started getting curious about how it works under the hood. Thankfully the code is open source, so I decided to take a look. The following are my notes on the architecture of AutoGPT. Hopefully this helps those who are curious about how AutoGPT works. Also, AutoGPT can serve as a reference design for those who are building their own agentic AI systems.","headline":"AI Agents: AutoGPT architecture &amp; breakdown","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/ai/autogpt-arch/"},"url":"http://localhost:4000/ai/autogpt-arch/"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" type="image/x-icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Jou-ching (George) Sung" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Jou-ching (George) Sung</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">AI Agents: AutoGPT architecture &amp; breakdown</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-04-23T05:54:41+08:00" itemprop="datePublished">Apr 23, 2023
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Recently I’ve found myself completely hooked experimenting with <a href="https://github.com/Significant-Gravitas/Auto-GPT">AutoGPT</a>, as have many others. Using AutoGPT as a black box, I started getting curious about how it works under the hood. Thankfully the code is open source, so I decided to take a look. The following are my notes on the architecture of AutoGPT. Hopefully this helps those who are curious about how AutoGPT works. Also, AutoGPT can serve as a reference design for those who are building their own agentic AI systems.</p>
+
+<p><em>Note</em>: I analyzed the code from <a href="https://github.com/Significant-Gravitas/Auto-GPT/releases/tag/v0.2.1">AutoGPT v0.2.1</a>, which I downloaded a week ago. The information below reflects AutoGPT 0.2.1. At the time of this writing (2023/04/22), AutoGPT v0.2.2 has already been released. Kudos to the incredible progress the community is making!</p>
+
+<h2 id="architecture">Architecture</h2>
+<p><img src="/assets/img/auto_gpt.svg" alt="block diagram" /></p>
+
+<h1 id="workflow">Workflow</h1>
+<ol>
+  <li>User (the human) defines the name of the AI agent, and specifies up to 5 goals, e.g. users of AutoGPT will see the following in their terminal (complete example in the Appendix under “<em>Example terminal message for initial user input</em>”)
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Welcome to Auto-GPT!  Enter the name of your AI and its role below.
+...
+Enter up to 5 goals for your AI:
+...
+Goal 1: ...
+Goal 2: ...
+</code></pre></div>    </div>
+  </li>
+  <li>Based on the user’s settings, the initial prompt is generated and sent to the ChatGPT API. The prompt contains the user’s setttings, and overall instructions for ChatGPT. Overall instructions include all available commands, instructions to output results in json, and more. For an example of an initial prompt, see the Appendix “<em>Example initial prompt</em>”.</li>
+  <li>ChatGPT returns a json string (ideally), which includes its thoughts, reasoning, plan, and criticism. The json also includes the next command to execute and its arguments. For an example of a json string returned by ChatGPT, see the Appendix “<em>Example json string returned by ChatGPT</em>”.</li>
+  <li>The command is extracted and parsed from ChatGPT’s response. If the shut down / <code class="language-plaintext highlighter-rouge">task_complete</code> command was issued, then the system shuts down. Else, the appropriate command executor executes the command with the given arguments.</li>
+  <li>The executed command returns a string value. For example, the Google search command would return the search results, the <code class="language-plaintext highlighter-rouge">browse_website</code> command would return a summary of the scraped website contents, the <code class="language-plaintext highlighter-rouge">write_to_file</code> would return the status of writing to a file, etc.</li>
+  <li>The ChatGPT output (4) and command return string (5) are combined, to be added to memory</li>
+  <li>The context from (6) is added to short-term memory, stored as text only. This could be implemented using queue/FIFO data structure. <em>In AutoGPT 0.2.1, the full message history is stored, but only the first 9 ChatGPT messages / command return strings are selected as short-term memory.</em></li>
+  <li>The context from (6) is also added to long-term memory. The general idea is we want a collection of <code class="language-plaintext highlighter-rouge">(vector, text)</code> pairs, and the ability to execute a <a href="https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm">KNN</a>/approximate-KNN search to find the top-K most similar items from a given query. To get the text embeddings/vectors, we use OpenAI’s ada-002 embeddings API. To store the <code class="language-plaintext highlighter-rouge">(vector, text)</code> pairs, we can use local memory (e.g. <a href="https://huggingface.co/learn/nlp-course/chapter5/6">FAISS</a>), or even a scalable <a href="https://www.pinecone.io/learn/vector-database/">vector database</a> like Pinecone. <em>AutoGPT 0.2.1 supports Pinecone, local datastore, and more. I used the local storage option, which writes the embedding vectors to disk in plain-text format.</em></li>
+  <li>Given the most recent context from the short-term memory (7), query the long-term memory from (8) to get the top-K most relevant pieces of memory (<em>K=10 for AutoGPT 0.2.1</em>). The top-K most relevant memories are added to the prompt, under <code class="language-plaintext highlighter-rouge">{relevant memory}</code> in the diagram. For an example prompt that includes memories, see the Appendix “<em>Example prompt with memories</em>”. The memories are added under “This reminds you of events from your past”.</li>
+  <li>A new prompt is constructed, with the same instructions from the initial prompt (2), the relevant memories from (9), and an instruction at the end to “GENERATE NEXT COMMAND JSON” (see the Appendix “<em>Example prompt with memories</em>”). This new prompt is used to call ChatGPT, and steps (3) through (10) are repeated until the task is complete, i.e. ChatGPT issues the <code class="language-plaintext highlighter-rouge">task_complete</code> / shut down command.</li>
+</ol>
+
+<h2 id="commands">Commands</h2>
+<p>One fascinating and very powerful aspect of agentic AI is its ability to issue and execute commands. In AutoGPT, the LLM system (ChatGPT) is made aware of the available commands and their functionality via the following text in the prompt:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Commands:
+1. Google Search: "google", args: "input": "&lt;search&gt;"
+2. Browse Website: "browse_website", args: "url": "&lt;url&gt;", "question": "&lt;what_you_want_to_find_on_website&gt;"
+3. Start GPT Agent: "start_agent", args: "name": "&lt;name&gt;", "task": "&lt;short_task_desc&gt;", "prompt": "&lt;prompt&gt;"
+4. Message GPT Agent: "message_agent", args: "key": "&lt;key&gt;", "message": "&lt;message&gt;"
+5. List GPT Agents: "list_agents", args: 
+6. Delete GPT Agent: "delete_agent", args: "key": "&lt;key&gt;"
+7. Clone Repository: "clone_repository", args: "repository_url": "&lt;url&gt;", "clone_path": "&lt;directory&gt;"
+8. Write to file: "write_to_file", args: "file": "&lt;file&gt;", "text": "&lt;text&gt;"
+9. Read file: "read_file", args: "file": "&lt;file&gt;"
+10. Append to file: "append_to_file", args: "file": "&lt;file&gt;", "text": "&lt;text&gt;"
+11. Delete file: "delete_file", args: "file": "&lt;file&gt;"
+12. Search Files: "search_files", args: "directory": "&lt;directory&gt;"
+13. Evaluate Code: "evaluate_code", args: "code": "&lt;full_code_string&gt;"
+14. Get Improved Code: "improve_code", args: "suggestions": "&lt;list_of_suggestions&gt;", "code": "&lt;full_code_string&gt;"
+15. Write Tests: "write_tests", args: "code": "&lt;full_code_string&gt;", "focus": "&lt;list_of_focus_areas&gt;"
+16. Execute Python File: "execute_python_file", args: "file": "&lt;file&gt;"
+17. Generate Image: "generate_image", args: "prompt": "&lt;prompt&gt;"
+18. Send Tweet: "send_tweet", args: "text": "&lt;text&gt;"
+19. Convert Audio to text: "read_audio_from_file", args: "file": "&lt;file&gt;"
+20. Do Nothing: "do_nothing", args: 
+21. Task Complete (Shutdown): "task_complete", args: "reason": "&lt;reason&gt;"
+</code></pre></div></div>
+<p>Each command has a short description (e.g. “Google Search”, “Execute Python File”, etc.) so ChatGPT knows which command to select given the current context. Further, each command has its own executor in AutoGPT.</p>
+
+<p>I find this a very powerful concept, since one can extend the suite of commands available, which opens up many possibilities. For example, if we had a command to add products to the shopping cart of an online retailer, we can specify an objective to (1) find tennis strings most suitable for a topspin baseline player, and (2) add that string to the user’s shopping cart. One can also extend commands to the physical world, such as smart home controls. Of course, it is very important to prioritize safety, as these LLM-based autonomous agents are still in their early days of development!</p>
+
+<h2 id="appendix">Appendix</h2>
+<h1 id="example-terminal-message-for-initial-user-input">Example terminal message for initial user input</h1>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Welcome to Auto-GPT!  Enter the name of your AI and its role below. Entering nothing will load defaults.
+Name your AI:  For example, 'Entrepreneur-GPT'
+AI Name: Foo
+Foo here!  I am at your service.
+Describe your AI's role:  For example, 'an AI designed to autonomously develop and run businesses with the sole goal of increasing your net worth.'
+Foo is: an AI that recommends tennis equipment for a specific player
+Enter up to 5 goals for your AI:  For example: Increase net worth, Grow Twitter Account, Develop and manage multiple businesses autonomously'
+Enter nothing to load defaults, enter nothing when finished.
+Goal 1: Find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin
+Goal 2: Write the tennis strings to output
+Goal 3: Shut down when you are done
+Goal 4: 
+</code></pre></div></div>
+
+<h1 id="how-chatcompletions-messages-are-printed">How ChatCompletions messages are printed</h1>
+<p>AutoGPT uses OpenAI’s <a href="https://platform.openai.com/docs/guides/chat/introduction">ChatCompletion</a>, which expects a list of dicts that represents the chat history. For visual clarify, I have printed out the prompts that go into ChatGPT as a string. For example:</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">messages</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span><span class="s">"role"</span><span class="p">:</span> <span class="s">"system"</span><span class="p">,</span> <span class="s">"content"</span><span class="p">:</span> <span class="s">"foo"</span><span class="p">},</span>
+    <span class="p">{</span><span class="s">"role"</span><span class="p">:</span> <span class="s">"user"</span><span class="p">,</span> <span class="s">"content"</span><span class="p">:</span> <span class="s">"bar1"</span><span class="p">},</span>
+    <span class="p">{</span><span class="s">"role"</span><span class="p">:</span> <span class="s">"assistant"</span><span class="p">,</span> <span class="s">"content"</span><span class="p">:</span> <span class="s">"bar2"</span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div></div>
+<p>will be printed as:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>system: foo
+
+user: bar1
+
+assistant: bar2
+</code></pre></div></div>
+
+<h1 id="example-initial-prompt">Example initial prompt</h1>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>system: You are Foo, an AI that recommends tennis equipment for a specific player
+Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies with no legal complications.
+
+GOALS:
+
+1. Find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin
+2. Write the tennis strings to output
+3. Shut down when you are done
+
+
+Constraints:
+1. ~4000 word limit for short term memory. Your short term memory is short, so immediately save important information to files.
+2. If you are unsure how you previously did something or want to recall past events, thinking about similar events will help you remember.
+3. No user assistance
+4. Exclusively use the commands listed in double quotes e.g. "command name"
+
+Commands:
+1. Google Search: "google", args: "input": "&lt;search&gt;"
+2. Browse Website: "browse_website", args: "url": "&lt;url&gt;", "question": "&lt;what_you_want_to_find_on_website&gt;"
+3. Start GPT Agent: "start_agent", args: "name": "&lt;name&gt;", "task": "&lt;short_task_desc&gt;", "prompt": "&lt;prompt&gt;"
+4. Message GPT Agent: "message_agent", args: "key": "&lt;key&gt;", "message": "&lt;message&gt;"
+5. List GPT Agents: "list_agents", args: 
+6. Delete GPT Agent: "delete_agent", args: "key": "&lt;key&gt;"
+7. Clone Repository: "clone_repository", args: "repository_url": "&lt;url&gt;", "clone_path": "&lt;directory&gt;"
+8. Write to file: "write_to_file", args: "file": "&lt;file&gt;", "text": "&lt;text&gt;"
+9. Read file: "read_file", args: "file": "&lt;file&gt;"
+10. Append to file: "append_to_file", args: "file": "&lt;file&gt;", "text": "&lt;text&gt;"
+11. Delete file: "delete_file", args: "file": "&lt;file&gt;"
+12. Search Files: "search_files", args: "directory": "&lt;directory&gt;"
+13. Evaluate Code: "evaluate_code", args: "code": "&lt;full_code_string&gt;"
+14. Get Improved Code: "improve_code", args: "suggestions": "&lt;list_of_suggestions&gt;", "code": "&lt;full_code_string&gt;"
+15. Write Tests: "write_tests", args: "code": "&lt;full_code_string&gt;", "focus": "&lt;list_of_focus_areas&gt;"
+16. Execute Python File: "execute_python_file", args: "file": "&lt;file&gt;"
+17. Generate Image: "generate_image", args: "prompt": "&lt;prompt&gt;"
+18. Send Tweet: "send_tweet", args: "text": "&lt;text&gt;"
+19. Convert Audio to text: "read_audio_from_file", args: "file": "&lt;file&gt;"
+20. Do Nothing: "do_nothing", args: 
+21. Task Complete (Shutdown): "task_complete", args: "reason": "&lt;reason&gt;"
+
+Resources:
+1. Internet access for searches and information gathering.
+2. Long Term memory management.
+3. GPT-3.5 powered Agents for delegation of simple tasks.
+4. File output.
+
+Performance Evaluation:
+1. Continuously review and analyze your actions to ensure you are performing to the best of your abilities.
+2. Constructively self-criticize your big-picture behavior constantly.
+3. Reflect on past decisions and strategies to refine your approach.
+4. Every command has a cost, so be smart and efficient. Aim to complete tasks in the least number of steps.
+
+You should only respond in JSON format as described below 
+Response Format: 
+{
+    "thoughts": {
+        "text": "thought",
+        "reasoning": "reasoning",
+        "plan": "- short bulleted\n- list that conveys\n- long-term plan",
+        "criticism": "constructive self-criticism",
+        "speak": "thoughts summary to say to user"
+    },
+    "command": {
+        "name": "command name",
+        "args": {
+            "arg name": "value"
+        }
+    }
+} 
+Ensure the response can be parsed by Python json.loads
+system: The current time and date is Sat Apr 22 01:43:22 2023
+system: This reminds you of these events from your past:
+
+
+
+user: Determine which next command to use, and respond using the format specified above:
+</code></pre></div></div>
+
+<h1 id="example-json-string-returned-by-chatgpt">Example json string returned by ChatGPT</h1>
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nl">"thoughts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"I need to find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin. I should start by doing some research on the topic."</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"reasoning"</span><span class="p">:</span><span class="w"> </span><span class="s2">"I need to gather information on the characteristics of tennis strings that are suitable for a hard hitting baseline player who hits with a lot of topspin. This will help me narrow down my search and find the top 3 most suitable options."</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"plan"</span><span class="p">:</span><span class="w"> </span><span class="s2">"- Conduct a Google search on the topic</span><span class="se">\n</span><span class="s2">- Browse websites that specialize in tennis equipment</span><span class="se">\n</span><span class="s2">- Consult with a GPT agent if necessary"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"criticism"</span><span class="p">:</span><span class="w"> </span><span class="s2">"I need to make sure that I am gathering information from reliable sources and that I am considering all relevant factors when making my recommendations."</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"speak"</span><span class="p">:</span><span class="w"> </span><span class="s2">"I will conduct a Google search on the topic and browse websites that specialize in tennis equipment to find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin."</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nl">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"google"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nl">"input"</span><span class="p">:</span><span class="w"> </span><span class="s2">"best tennis strings for hard hitting baseline player with topspin"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<h1 id="example-prompt-with-memories">Example prompt with memories</h1>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>system: You are Foo, an AI that recommends tennis equipment for a specific player
+Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies with no legal complications.
+
+GOALS:
+
+1. Find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin
+2. Write the tennis strings to output
+3. Shut down when you are done
+
+
+Constraints:
+1. ~4000 word limit for short term memory. Your short term memory is short, so immediately save important information to files.
+2. If you are unsure how you previously did something or want to recall past events, thinking about similar events will help you remember.
+3. No user assistance
+4. Exclusively use the commands listed in double quotes e.g. "command name"
+
+Commands:
+1. Google Search: "google", args: "input": "&lt;search&gt;"
+2. Browse Website: "browse_website", args: "url": "&lt;url&gt;", "question": "&lt;what_you_want_to_find_on_website&gt;"
+3. Start GPT Agent: "start_agent", args: "name": "&lt;name&gt;", "task": "&lt;short_task_desc&gt;", "prompt": "&lt;prompt&gt;"
+4. Message GPT Agent: "message_agent", args: "key": "&lt;key&gt;", "message": "&lt;message&gt;"
+5. List GPT Agents: "list_agents", args: 
+6. Delete GPT Agent: "delete_agent", args: "key": "&lt;key&gt;"
+7. Clone Repository: "clone_repository", args: "repository_url": "&lt;url&gt;", "clone_path": "&lt;directory&gt;"
+8. Write to file: "write_to_file", args: "file": "&lt;file&gt;", "text": "&lt;text&gt;"
+9. Read file: "read_file", args: "file": "&lt;file&gt;"
+10. Append to file: "append_to_file", args: "file": "&lt;file&gt;", "text": "&lt;text&gt;"
+11. Delete file: "delete_file", args: "file": "&lt;file&gt;"
+12. Search Files: "search_files", args: "directory": "&lt;directory&gt;"
+13. Evaluate Code: "evaluate_code", args: "code": "&lt;full_code_string&gt;"
+14. Get Improved Code: "improve_code", args: "suggestions": "&lt;list_of_suggestions&gt;", "code": "&lt;full_code_string&gt;"
+15. Write Tests: "write_tests", args: "code": "&lt;full_code_string&gt;", "focus": "&lt;list_of_focus_areas&gt;"
+16. Execute Python File: "execute_python_file", args: "file": "&lt;file&gt;"
+17. Generate Image: "generate_image", args: "prompt": "&lt;prompt&gt;"
+18. Send Tweet: "send_tweet", args: "text": "&lt;text&gt;"
+19. Convert Audio to text: "read_audio_from_file", args: "file": "&lt;file&gt;"
+20. Do Nothing: "do_nothing", args: 
+21. Task Complete (Shutdown): "task_complete", args: "reason": "&lt;reason&gt;"
+
+Resources:
+1. Internet access for searches and information gathering.
+2. Long Term memory management.
+3. GPT-3.5 powered Agents for delegation of simple tasks.
+4. File output.
+
+Performance Evaluation:
+1. Continuously review and analyze your actions to ensure you are performing to the best of your abilities.
+2. Constructively self-criticize your big-picture behavior constantly.
+3. Reflect on past decisions and strategies to refine your approach.
+4. Every command has a cost, so be smart and efficient. Aim to complete tasks in the least number of steps.
+
+You should only respond in JSON format as described below 
+Response Format: 
+{
+    "thoughts": {
+        "text": "thought",
+        "reasoning": "reasoning",
+        "plan": "- short bulleted\n- list that conveys\n- long-term plan",
+        "criticism": "constructive self-criticism",
+        "speak": "thoughts summary to say to user"
+    },
+    "command": {
+        "name": "command name",
+        "args": {
+            "arg name": "value"
+        }
+    }
+} 
+Ensure the response can be parsed by Python json.loads
+system: The current time and date is Sat Apr 22 13:47:07 2023
+system: This reminds you of these events from your past:
+['Assistant Reply: {\n    "thoughts": {\n        "text": "I need to find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin. I should start by doing some research on the topic.",\n        "reasoning": "I need to gather information on the characteristics of tennis strings that are suitable for a hard hitting baseline player who hits with a lot of topspin. This will help me narrow down my search and find the top 3 most suitable options.",\n        "plan": "- Conduct a Google search on the topic\\n- Browse websites that specialize in tennis equipment\\n- Consult with a GPT agent if necessary",\n        "criticism": "I need to make sure that I am gathering information from reliable sources and that I am considering all relevant factors when making my recommendations.",\n        "speak": "I will conduct a Google search on the topic and browse websites that specialize in tennis equipment to find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin."\n    },\n    "command": {\n        "name": "google",\n        "args": {\n            "input": "best tennis strings for hard hitting baseline player with topspin"\n        }\n    }\n} \nResult: Command google returned: b\'[\\n    {\\n        "title": "Best Tennis Strings in 2023 - For Spin, Power, Control - Athlete Path",\\n        "href": "https://www.athletepath.com/best-tennis-strings/",\\n        "body": "Wilson Champions Choice Duo Tennis String Babolat RPM Blast Black 17g Strings Solinco Hyper-G Heaven High Spin Poly String Head Rip Control Tennis String Wilson NXT String Tourna Big Hitter Black7 Luxilion ALU Power 125 Tennis Racquet String Set How to Choose Tennis Strings Types of Tennis Strings Important Features to Consider Conclusion"\\n    },\\n    {\\n        "title": "Best tennis strings of 2022 | TW gear guide - Tennis Warehouse",\\n        "href": "https://www.tennis-warehouse.com/learning_center/gear_guides/tennis_string/best_tennis_strings.html",\\n        "body": "Wilson Champion\\\'s Choice Hybrid 16 String 5.0 3 Reviews $ 41.95 Quantity: 1 Increment Add To Cart Wish list TW Reviews Price Icon Lowest Price Guarantee Arrow Up We will match or beat any posted overall price advertised in-store or online on in stock items. Shop Hybrids Best strings by playing feature (benefit)"\\n    },\\n    {\\n        "title": "11 Best Tennis Strings For Spin - A Complete Guide",\\n        "href": "https://tennispredict.com/11-best-tennis-strings-for-spin/",\\n        "body": "These are the 11 best tennis strings for spin. Babolat RPM Blast Luxilon ALU Power Spin Solinco Tour Bite 19 Technifiber Black Code 4S 16 Volkl Cyclone 16 Kirschbaum Xplosive Speed 16 Wilson Revolve Spin 16 Turna Poly Big Hitter Black 7 Gamma AMP Moto 16 Head Sonic Pro Edge 16 Yonex Poly Tour Spin"\\n    },\\n    {\\n        "title": "10+ Best Tennis Strings for 2023 | Playtested &amp; Reviewed",\\n        "href": "https://tenniscompanion.org/best-tennis-strings/",\\n        "body": "My pick for the best synthetic gut tennis string, which I cover in greater detail in this guide, is Prince Synthetic Gut. It\\\'s an excellent string with a long-standing positive reputation in the tennis community. Here are a few additional options to consider for beginners and children. Head Synthetic Gut PPS Gamma Synthetic Gut"\\n    },\\n    {\\n        "title": "Best Tennis Strings for Topspin",\\n        "href": "https://primotennis.com/best-tennis-strings-for-topspin/",\\n        "body": "Finding the sweet spot is key! The best string tension for topspin is around 50-60 pounds (23-27 kg). This provides enough power and control while still allowing the ball to bite into the string bed for maximum spin potential. If you find that your strings are breaking too frequently, you may want to increase the tension slightly."\\n    },\\n    {\\n        "title": "12 Best Tennis Strings With Buying Guide 2023 - Tennisscan",\\n        "href": "https://tennisscan.com/best-tennis-strings/",\\n        "body": "Wilson Champions Choice is a cross between Wilson Natural Gut and Luxilon ALU Power Rough, two of the most popular strings on tour. The player gets the best of both worlds by combining the optimum playability of a high-quality. Use the Luxilon ALU Power Rough for durability and control in the mains."\\n    },\\n    {\\n        "title": "Most Spin-Friendly Strings - Tennis Warehouse",\\n        "href": "https://www.tennis-warehouse.com/learning_center/gear_guides/tennis_string/best_spin_strings.html",\\n        "body": "It also provides a low-powered response, which allows big hitters to play with confidence. Read the full review. Weiss CANNON Ultra Cable 17 Yellow/1.23 String. $12.90. 3. Weiss CANNON Ultra Cable 17/1.23 String White. $12.90. 3. Weiss CANNON Ultra Cable 17 Ye/1.23 String Reel - 660\\\'."\\n    },\\n    {\\n        "title": "The Best Tennis Strings - The Tennis Bros",\\n        "href": "https://thetennisbros.com/reviews/strings/the-best-tennis-strings/",\\n        "body": "Natural gut is the most powerful, most elastic string on the planet and is loved by professional and amateur players alike. It\\\'s created from cow intestine that is twisted into a string format in a factory, coated and then sold in a packet. Its touch on the tennis court is heavenly and it feels like velvet on the arm."\\n    }\\n]\' \nHuman Feedback: GENERATE NEXT COMMAND JSON ']
+
+
+user: GENERATE NEXT COMMAND JSON
+assistant: {
+    "thoughts": {
+        "text": "Based on my research, I have found some tennis strings that are suitable for a hard hitting baseline player with topspin. I will now write these strings to output and shut down.",
+        "reasoning": "I have completed my research and found the information I need to make my recommendations. Writing the strings to output will allow the user to see my recommendations and shut down will end this task.",
+        "plan": "- Write the top 3 most suitable tennis strings to output\n- Shut down",
+        "criticism": "I need to make sure that I am providing accurate and helpful information to the user. I should also consider providing additional information on why these strings are suitable for a hard hitting baseline player with topspin.",
+        "speak": "Based on my research, I have found some tennis strings that are suitable for a hard hitting baseline player with topspin. I will now write these strings to output and shut down."
+    },
+    "command": {
+        "name": "write_to_file",
+        "args": {
+            "file": "recommended_strings.txt",
+            "text": "1. Babolat RPM Blast\n2. Solinco Tour Bite\n3. Luxilon ALU Power Spin"
+        }
+    }
+}
+system: Command write_to_file returned: File written to successfully.
+user: GENERATE NEXT COMMAND JSON
+</code></pre></div></div>
+
+  </div><a class="u-url" href="/ai/autogpt-arch/" hidden></a>
+</article>
+
+<script src="https://giscus.app/client.js"
+        data-repo="georgesung/georgesung.github.io"
+        data-repo-id="R_kgDOJaJWKA"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOJaJWKM4CWEag"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        crossorigin="anonymous"
+        async>
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Jou-ching (George) Sung</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Jou-ching (George) Sung</li><li><a class="u-email" href="mailto:georgesung@gmail.com">georgesung@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/georgesung"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">georgesung</span></a></li><li><a href="https://www.twitter.com/sungjouching"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">sungjouching</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Hi! Welcome to my site. More info about me on https://www.linkedin.com/in/georgesung/</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

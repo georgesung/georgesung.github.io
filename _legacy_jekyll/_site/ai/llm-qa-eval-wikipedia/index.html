@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>OpenAI vs Open Source LLM Comparison for Document Q&amp;A | Jou-ching (George) Sung</title>
+<meta name="generator" content="Jekyll v3.9.3" />
+<meta property="og:title" content="OpenAI vs Open Source LLM Comparison for Document Q&amp;A" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="TLDR For simple Wikipedia article Q&amp;A, I compared OpenAI GPT 3.5, FastChat-T5, FLAN-T5-XXL, and FLAN-T5-XL. GPT 3.5 provided the best answers, but FastChat-T5 was very close in performance (with a basic guardrail). The T5 models I tested are all licensed under Apache 2.0, so they are commercially viable." />
+<meta property="og:description" content="TLDR For simple Wikipedia article Q&amp;A, I compared OpenAI GPT 3.5, FastChat-T5, FLAN-T5-XXL, and FLAN-T5-XL. GPT 3.5 provided the best answers, but FastChat-T5 was very close in performance (with a basic guardrail). The T5 models I tested are all licensed under Apache 2.0, so they are commercially viable." />
+<link rel="canonical" href="http://localhost:4000/ai/llm-qa-eval-wikipedia/" />
+<meta property="og:url" content="http://localhost:4000/ai/llm-qa-eval-wikipedia/" />
+<meta property="og:site_name" content="Jou-ching (George) Sung" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-05-07T02:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="OpenAI vs Open Source LLM Comparison for Document Q&amp;A" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2023-05-07T02:00:00+08:00","datePublished":"2023-05-07T02:00:00+08:00","description":"TLDR For simple Wikipedia article Q&amp;A, I compared OpenAI GPT 3.5, FastChat-T5, FLAN-T5-XXL, and FLAN-T5-XL. GPT 3.5 provided the best answers, but FastChat-T5 was very close in performance (with a basic guardrail). The T5 models I tested are all licensed under Apache 2.0, so they are commercially viable.","headline":"OpenAI vs Open Source LLM Comparison for Document Q&amp;A","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/ai/llm-qa-eval-wikipedia/"},"url":"http://localhost:4000/ai/llm-qa-eval-wikipedia/"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" type="image/x-icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Jou-ching (George) Sung" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Jou-ching (George) Sung</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">OpenAI vs Open Source LLM Comparison for Document Q&amp;A</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-05-07T02:00:00+08:00" itemprop="datePublished">May 7, 2023
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <h2 id="tldr">TLDR</h2>
+<p>For simple Wikipedia article Q&amp;A, I compared OpenAI GPT 3.5, FastChat-T5, FLAN-T5-XXL, and FLAN-T5-XL. GPT 3.5 provided the best answers, but FastChat-T5 was very close in performance (with a basic guardrail). The T5 models I tested are all licensed under Apache 2.0, so they are commercially viable.</p>
+
+<p>For the embedding model, I compared OpenAI text-embedding-ada-002 and the open source INSTRUCTOR-XL models. The INSTRUCTOR-XL model performed better, which is encouraging since INSTRUCTOR-XL is also licensed under Apache 2.0. (<em>Update</em>: I just noticed both INSTRUCTOR-XL/LARGE models also perform better on the <a href="https://huggingface.co/spaces/mteb/leaderboard">MTEB Leaderboard</a>)</p>
+
+<p>The code for running these comparisons is available in my <a href="https://github.com/georgesung/LLM-WikipediaQA">Github repo</a>, which includes a link to a Colab notebook and an interactive Gradio app.</p>
+
+<h2 id="intro">Intro</h2>
+<p>The recent developments in open source LLMs to match ChatGPT have been incredibly exciting. There are great places to try out these new LLMs, e.g. on HuggingFace Spaces. Inspired by <a href="https://lightning.ai/pages/community/community-discussions/the-ultimate-battle-of-language-models-lit-llama-vs-gpt3.5-vs-bloom-vs/">The Ultimate Battle of Language Models: Lit-LLaMA vs GPT3.5 vs Bloom vs …</a>, I wanted to try out different LLMs for Q&amp;A on multiple articles with various questions. I was also particularly interested in commercially viable open source LLMs (so not Llama-based, but I’m curious!), since the use cases for these are broader, e.g. document Q&amp;A/chat on internal company documentation. Thus I decided to try out the following open source LLMs and embedding models, using the OpenAI models as a benchmark:</p>
+
+<p>LLMs:</p>
+<ul>
+  <li><a href="https://platform.openai.com/docs/models/gpt-3-5">gpt-3.5-turbo</a>: OpenAI GPT 3.5</li>
+  <li><a href="https://huggingface.co/lmsys/fastchat-t5-3b-v1.0">lmsys/fastchat-t5-3b-v1.0</a>: FastChat-T5 model (3B), Apache 2.0 license (note it’s trained on ShareGPT data)</li>
+  <li><a href="https://huggingface.co/google/flan-t5-xl">google/flan-t5-xl</a>: FLAN-T5-XL model (3B), Apache 2.0 license</li>
+  <li><a href="https://huggingface.co/google/flan-t5-xxl">google/flan-t5-xxl</a>: FLAN-T5-XXL model (11B), Apache 2.0 license</li>
+</ul>
+
+<p>Embedding models:</p>
+<ul>
+  <li><a href="https://platform.openai.com/docs/guides/embeddings/what-are-embeddings">text-embedding-ada-002</a>: OpenAI’s ada-002 text embedding model</li>
+  <li><a href="https://huggingface.co/hkunlp/instructor-xl">hkunlp/instructor-xl</a>: The <a href="https://instructor-embedding.github.io/">INSTRUCTOR-XL</a> embedding model, Apache 2.0 license</li>
+</ul>
+
+<p>There are many more exciting open source + commercially viable models to try out, I just haven’t yet had time to test them 😄</p>
+
+<p><em>Note on terminology</em>: In this blog post I only refer to generative LLMs as “LLMs”, even though large embedding models can also be considered <a href="https://en.wikipedia.org/wiki/Large_language_model">“Large Language Models”</a>.</p>
+
+<h2 id="basic-document-qa-system">Basic document Q&amp;A system</h2>
+<p>First, below is the basic Wikipedia article Q&amp;A system I built (<a href="https://github.com/georgesung/LLM-WikipediaQA">code</a>). I used <a href="https://pypi.org/project/Wikipedia-API/">Wikipedia-API</a> to search/retrieve/beautify Wikipedia articles, <a href="https://python.langchain.com/en/latest/index.html">LangChain</a> for the Q&amp;A framework, and OpenAI &amp; <a href="https://huggingface.co/">HuggingFace</a> models for embeddings and LLMs.</p>
+
+<p><strong>Search and index Wikipedia article</strong></p>
+
+<p><img src="/assets/img/wikiqa_search.svg" alt="search and index" /></p>
+
+<p><strong>Q&amp;A on article</strong></p>
+
+<p><img src="/assets/img/wikiqa_qa.svg" alt="question and answer" /></p>
+
+<h2 id="results">Results</h2>
+<p>In the results below:</p>
+<ul>
+  <li>❌ = incorrect answer</li>
+  <li>🤔 = partial credit</li>
+  <li><em>(no remarks)</em> = correct answer</li>
+</ul>
+
+<h1 id="embeddings-comparison">Embeddings comparison</h1>
+<p>In these runs, I compared the embeddings models used to create the embeddings/vectors for semantic search &amp; retrieval of relevant context. I fixed the LLM to OpenAI GPT 3.5, since that is the strongest LLM in these comparisons. I only present the results of two embeddings below – I did try a few other open source embeddings listed <a href="https://www.sbert.net/docs/pretrained_models.html">here</a>, but the results were not good.</p>
+
+<p>Interestingly, the open source INSTRUCTOR-XL embeddings perform better than the closed source OpenAI ada-002 embeddings.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Article</th>
+      <th>Question</th>
+      <th>hkunlp/instructor-xl</th>
+      <th>text-embedding-ada-002</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>GPT-4</td>
+      <td>Who created GPT-4?</td>
+      <td>GPT-4 was created by OpenAI.</td>
+      <td>GPT-4 was created by OpenAI.</td>
+    </tr>
+    <tr>
+      <td>GPT-4</td>
+      <td>How is GPT-4 better than its predecessors?</td>
+      <td>According to OpenAI, GPT-4 is “more reliable, creative, and able to handle much more nuanced instructions than GPT-3.5.” It has larger context windows of 8,192 and 32,768 tokens, is a multimodal model that can take images as well as text as input, and can use APIs when instructed to do so. It also introduced the “system message” to gain further control over its tone of voice and task.</td>
+      <td>GPT-4 is “more reliable, creative, and able to handle much more nuanced instructions than GPT-3.5.” It has larger context windows of 8,192 and 32,768 tokens, a significant improvement over GPT-3.5 and GPT-3, which were limited to 4,096 and 2,049 tokens respectively. It is also a multimodal model that can take images as well as text as input, and can use APIs when instructed to do so.</td>
+    </tr>
+    <tr>
+      <td>GPT-4</td>
+      <td>Who played in the finals?</td>
+      <td>There is no information provided in the given context to answer this question.</td>
+      <td>There is no information provided in the context about any finals being played, so it is not possible to answer this question.</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Where was the event held? Name the city and country</td>
+      <td>The event was held in Qatar, with matches played in eight venues across five cities. The opening ceremony took place at the Al Bayt Stadium in Al Khor.</td>
+      <td>The event was held in Qatar, across five cities. The opening match was held in Al Khor.</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Who won the tournament?</td>
+      <td>Argentina won the tournament.</td>
+      <td>The context does not provide information on who won the tournament. ❌</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Who played in the finals?</td>
+      <td>Argentina and France played in the finals.</td>
+      <td>Argentina and France played in the finals.</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Who had the broadcasting rights?</td>
+      <td>Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish) had the broadcasting rights for the 2022 FIFA World Cup.</td>
+      <td>Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish) had the broadcasting rights for the 2022 FIFA World Cup in Canada and the United States.</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Which two teams qualified for the knock-out round from Group D?</td>
+      <td>France and Australia qualified for the knock-out round from Group D.</td>
+      <td>The context does not provide information on which two teams qualified for the knock-out round from Group D. ❌</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>How is GPT-4 better than its predecessors?</td>
+      <td>There is no information provided about GPT-4 in the given context, so it is not possible to answer this question.</td>
+      <td>There is no information in the given context about GPT-4 or any comparison with its predecessors.</td>
+    </tr>
+    <tr>
+      <td>Diablo IV</td>
+      <td>What classes are available?</td>
+      <td>The five classes available in Diablo IV are Barbarian, Sorceress, Druid, Rogue, and Necromancer.</td>
+      <td>The five classes available in Diablo IV are Barbarian, Sorceress, Druid, Rogue, and Necromancer.</td>
+    </tr>
+    <tr>
+      <td>Diablo IV</td>
+      <td>When is the release date?</td>
+      <td>The release date for Diablo IV is June 6, 2023.</td>
+      <td>The release date for Diablo IV is June 6, 2023.</td>
+    </tr>
+    <tr>
+      <td>Diablo IV</td>
+      <td>How is the vanishing gradient issue addressed?</td>
+      <td>There is no information provided about the vanishing gradient issue in the given context.</td>
+      <td>There is no information provided about the vanishing gradient issue in the given context.</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>How does Stable Diffusion work?</td>
+      <td>Stable Diffusion is a deep learning, text-to-image model that generates detailed images conditioned on text descriptions. It is a latent diffusion model, a kind of deep generative neural network, and supports the ability to generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output. It also allows the use of prompts to partially alter existing images via inpainting and outpainting. The model weights have been released publicly and it can run on most consumer hardware equipped with a modest GPU with at least 8 GB VRAM.</td>
+      <td>Stable Diffusion is a deep learning, text-to-image model that generates detailed images conditioned on text descriptions. It is a latent diffusion model, a kind of deep generative neural network, and supports the ability to generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output. It also allows the use of prompts to partially alter existing images via inpainting and outpainting. The model weights have been released publicly and it can run on most consumer hardware equipped with a modest GPU with at least 8 GB VRAM.</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>Who created Stable Diffusion?</td>
+      <td>Stable Diffusion was created by the start-up company Stability AI in collaboration with academic researchers and non-profit organizations.</td>
+      <td>Stable Diffusion was developed by the start-up company Stability AI in collaboration with academic researchers and non-profit organizations.</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>Describe the model architecture</td>
+      <td>Stable Diffusion uses a latent diffusion model (LDM) architecture developed by the CompVis group at LMU Munich. It consists of three parts: a variational autoencoder (VAE) encoder, a U-Net block composed of a ResNet backbone, and a VAE decoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, while the U-Net block denoises the output from forward diffusion backwards to obtain a latent representation. Finally, the VAE decoder generates the final image by converting the representation back into pixel space. The model can be flexibly conditioned on a string of text, an image, or another modality, and the encoded conditioning data is exposed to denoising U-Nets via a cross-attention mechanism.</td>
+      <td>The Stable Diffusion model consists of a latent diffusion model (LDM) that includes a variational autoencoder (VAE), U-Net, and an optional text encoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, while Gaussian noise is iteratively applied to the compressed latent representation during forward diffusion. The U-Net block denoises the output from forward diffusion backwards to obtain a latent representation, and the VAE decoder generates the final image by converting the representation back into pixel space. The denoising step can be conditioned on a string of text, an image, or another modality, and the encoded conditioning data is exposed to denoising U-Nets via a cross-attention mechanism. The model was trained on subsets of captioned images using 256 Nvidia A100 GPUs on Amazon Web Services for a total of 150,000 GPU-hours.</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>Who played in the finals?</td>
+      <td>There is no information provided about any finals, so it is not possible to answer this question.</td>
+      <td>There is no information provided about any finals being played, so it is not possible to answer this question.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1 id="llms-comparison">LLMs comparison</h1>
+<p>To compare different LLMs, I fixed the embeddings model to the INSTRUCTOR-XL model, since it performed better in the comparisons above.</p>
+
+<p><strong>Naive comparison</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Article</th>
+      <th>Question</th>
+      <th>gpt-3.5-turbo</th>
+      <th>lmsys/fastchat-t5-3b-v1.0</th>
+      <th>google/flan-t5-xl</th>
+      <th>google/flan-t5-xxl</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>GPT-4</td>
+      <td>Who created GPT-4?</td>
+      <td>GPT-4 was created by OpenAI.</td>
+      <td>OpenAI.</td>
+      <td>OpenAI</td>
+      <td>OpenAI</td>
+    </tr>
+    <tr>
+      <td>GPT-4</td>
+      <td>How is GPT-4 better than its predecessors?</td>
+      <td>According to OpenAI, GPT-4 is “more reliable, creative, and able to handle much more nuanced instructions than GPT-3.5.” It has larger context windows of 8,192 and 32,768 tokens, is a multimodal model that can take images as well as text as input, and can use APIs when instructed to do so. It also introduced the “system message” to gain further control over its tone of voice and task.</td>
+      <td>GPT-4 is better than its predecessors in several ways:<br /> * It has a larger context window of 8,192 and 32,768 tokens, which allows it to handle more complex instructions<br /> * It is a multimodal model, which allows it to take images as well as text as input<br /> * It has a system message that allows it to specify its tone of voice and task<br /> * It can use APIs when instructed to do so, which allows it to fulfill requests beyond its normal capabilities</td>
+      <td>GPT-4 is a multimodal model: it can take images as well as text as input</td>
+      <td>GPT-4 is a multimodal model: it can take images as well as text as input</td>
+    </tr>
+    <tr>
+      <td>GPT-4</td>
+      <td>Who played in the finals?</td>
+      <td>There is no information provided in the given context to answer this question.</td>
+      <td>Answer: GPT-4 played in the finals. ❌</td>
+      <td>unanswerable</td>
+      <td>GPT-4 ❌</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Where was the event held? Name the city and country</td>
+      <td>The event was held in Qatar, with matches played in eight venues across five cities. The opening ceremony took place at the Al Bayt Stadium in Al Khor.</td>
+      <td>The event was held in Doha, Qatar. 🤔</td>
+      <td>Qatar 🤔</td>
+      <td>Qatar 🤔</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Who won the tournament?</td>
+      <td>Argentina won the tournament.</td>
+      <td>Argentina won the tournament.</td>
+      <td>Argentina</td>
+      <td>Argentina</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Who played in the finals?</td>
+      <td>Argentina and France played in the finals.</td>
+      <td>Argentina and France.</td>
+      <td>Argentina and France</td>
+      <td>Argentina and France</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Who had the broadcasting rights?</td>
+      <td>Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish) had the broadcasting rights for the 2022 FIFA World Cup.</td>
+      <td>The broadcasting rights for the 2022 FIFA World Cup were held by Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish).</td>
+      <td>Fox Sports 🤔</td>
+      <td>Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish)</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Which two teams qualified for the knock-out round from Group D?</td>
+      <td>France and Australia qualified for the knock-out round from Group D.</td>
+      <td>France and Australia.</td>
+      <td>France and Australia</td>
+      <td>France and Australia</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>How is GPT-4 better than its predecessors?</td>
+      <td>There is no information provided about GPT-4 in the given context, so it is not possible to answer this question.</td>
+      <td>GPT-4 is better than its predecessors in that it is a more advanced version of the GPT series of games. It has more features and is more advanced than its predecessors. It also has more levels and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels of difficulty. It also has more levels of difficulty and more levels ❌</td>
+      <td>It is more powerful ❌</td>
+      <td>It is a more powerful version of GPT-3. ❌</td>
+    </tr>
+    <tr>
+      <td>Diablo IV</td>
+      <td>What classes are available?</td>
+      <td>The five classes available in Diablo IV are Barbarian, Sorceress, Druid, Rogue, and Necromancer.</td>
+      <td>Barbarian, Sorceress, Druid, Rogue, and Necromancer.</td>
+      <td>Barbarian, Sorceress, Druid, Rogue, and Necromancer</td>
+      <td>Barbarian, Sorceress, Druid, Rogue, and Necromancer</td>
+    </tr>
+    <tr>
+      <td>Diablo IV</td>
+      <td>When is the release date?</td>
+      <td>The release date for Diablo IV is June 6, 2023.</td>
+      <td>June 6, 2023.</td>
+      <td>June 6, 2023</td>
+      <td>June 6, 2023</td>
+    </tr>
+    <tr>
+      <td>Diablo IV</td>
+      <td>How is the vanishing gradient issue addressed?</td>
+      <td>There is no information provided about the vanishing gradient issue in the given context.</td>
+      <td>The vanishing gradient issue is addressed by using a more detailed and realistic texture map for the environment. The texture map is a 3D model of the environment that is used to create the textures for the environment. The texture map is created using a combination of textures from the environment and the player’s character. The texture map is then used to create the textures for the environment. This process is repeated for each texture in the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the textures for the environment. The texture map is then used to create the ❌</td>
+      <td>Both Blizzard and Nvidia reported in March 2023 that they were working to resolve the issue. ❌</td>
+      <td>Blizzard and Nvidia reported in March 2023 that they were working to resolve the issue. ❌</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>How does Stable Diffusion work?</td>
+      <td>Stable Diffusion is a deep learning, text-to-image model that generates detailed images conditioned on text descriptions using a latent diffusion model, a kind of deep generative neural network. It supports the ability to generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output, and can also be used to partially alter existing images via inpainting and outpainting. Its code and model weights have been released publicly, and it can run on most consumer hardware equipped with a modest GPU with at least 8 GB VRAM.</td>
+      <td>Stable Diffusion works by using a latent diffusion model, a kind of deep generative neural network, to generate detailed images conditioned on text descriptions. The model can generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output, or existing images can be re-drawn by the model to incorporate new elements described by a text prompt through its diffusion-denoising mechanism. It also allows the use of prompts to partially alter existing images via inpainting and outpainting.</td>
+      <td>It is primarily used to generate detailed images conditioned on text descriptions, though it can also be applied to other tasks such as inpainting, outpainting, and generating image-to-image translations guided by a text prompt 🤔</td>
+      <td>Stable Diffusion is a deep learning, text-to-image model released in 2022. It is primarily used to generate detailed images conditioned on text descriptions, though it can also be applied to other tasks such as inpainting, outpainting, and generating image-to-image translations guided by a text prompt. 🤔</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>Who created Stable Diffusion?</td>
+      <td>Stable Diffusion was created by the start-up company Stability AI in collaboration with academic researchers and non-profit organizations.</td>
+      <td>The start-up company Stability AI in collaboration with a number of academic researchers and non-profit organizations.</td>
+      <td>Stability AI</td>
+      <td>Stability AI</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>Describe the model architecture</td>
+      <td>Stable Diffusion uses a latent diffusion model (LDM) architecture developed by the CompVis group at LMU Munich. It consists of three parts: a variational autoencoder (VAE) encoder, a U-Net block composed of a ResNet backbone, and a VAE decoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, while the U-Net block denoises the output from forward diffusion backwards to obtain a latent representation. Finally, the VAE decoder generates the final image by converting the representation back into pixel space. The model can be flexibly conditioned on a string of text, an image, or another modality, and the encoded conditioning data is exposed to denoising U-Nets via a cross-attention mechanism.</td>
+      <td>Stable Diffusion uses a kind of diffusion model (DM), called a latent diffusion model (LDM) developed by the CompVis group at LMU Munich. Introduced in 2015, diffusion models are trained with the objective of removing successive applications of Gaussian noise on training images which can be thought of as a sequence of denoising autoencoders. Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, capturing a more fundamental semantic meaning of the image. Gaussian noise is iteratively applied to the compressed latent representation during forward diffusion. The U-Net block, composed of a ResNet backbone, denoises the output from forward diffusion backwards to obtain a latent representation. Finally, the VAE decoder generates the final image by converting the representation back into pixel space. The denoising step can be flexibly conditioned on a string of text, an image, or another modality. For conditioning on text, the fixed, pretrained CLIP ViT-L/14 text encoder is used to transform text prompts to an embedding space. Researchers point to increased computational efficiency for training and generation as an advantage of LDMs.</td>
+      <td>Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder</td>
+      <td>Stable Diffusion uses a kind of diffusion model (DM), called a latent diffusion model (LDM) developed by the CompVis group at LMU Munich. Introduced in 2015, diffusion models are trained with the objective of removing successive applications of Gaussian noise on training images which can be thought of as a sequence of denoising autoencoders. Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder.</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>Who played in the finals?</td>
+      <td>There is no information provided about any finals, so it is not possible to answer this question.</td>
+      <td>I don’t know, I don’t know who played in the finals.</td>
+      <td>Stability AI ❌</td>
+      <td>Stability AI ❌</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Overall, OpenAI GPT 3.5 performed the best. Apart from the “trick questions” (questions whose answer should be “I don’t know”), FastChat-T5 came very close to GPT 3.5 for these Q&amp;A tasks. There was some performance gap between FastChat-T5 and the original Flan-T5 models – FastChat-T5 at 3B parameters even performed better than FLAN-T5-XXL at 11B parameters, which speaks to the importance of the training dataset (and/or training duration?).</p>
+
+<p><em>However</em>, note the answers produced following the “trick questions”, where the question cannot be answered by the context provided. An example would be asking “Who played in the finals?” on the Wikipedia article about GPT-4. The LLM should say the equivalent of “I don’t know”. GPT 3.5 successfully says it doesn’t know given these trick questions, but the open source models tend to make stuff up.</p>
+
+<p><strong>Comparison using question-checking</strong></p>
+
+<p>Can we just dismiss the open source LLMs from here? Not necessarily. I ran the open source LLMs in a straightforward manner, without any special guardrails. Under the hood, I am guessing OpenAI has created guardrails around the raw GPT 3.5 LLM model, so the results served by the GPT 3.5 API are safe, free of hallucination, non-toxic, etc. Back to answering the trick questions, one simple guardrail I found was to use the LLM itself to determine if a question can be answered given the context.</p>
+
+<p>In a separate LLM invocation, let’s call it the “question-checking” LLM (as opposed to “question-answering” LLM), we can slightly modify <a href="https://github.com/hwchase17/langchain/blob/v0.0.160/langchain/chains/retrieval_qa/prompt.py#L4">LangChain’s default Q&amp;A prompt</a> to the following:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>"""Given the following pieces of context, determine if the question is able to be answered by the information in the context.
+Respond with 'yes' or 'no'.
+{context}
+Question: {question}
+"""
+</code></pre></div></div>
+<p>The question-checking LLM should respond with “yes” or “no”. If we don’t get a “yes”, we can assume the question cannot be answered, and any response from the question-answering LLM can be ignored, and a simple “I don’t know” can be returned the the user.</p>
+
+<p>In my <a href="https://github.com/georgesung/LLM-WikipediaQA/blob/cd6b693959709d2fc6108a000592a9c690bfcabc/WikipediaQA.py#L144">code</a>, the question-checking and question-answering LLMs use the same LLM instance, just different prompts. Thus, for an answerable question, the inference latency will involve two calls to the LLM. If latency is an issue, one can load two LLM instances (they don’t even need to be the same type of LLM), and run both question-checking and question-answering LLMs in parallel. Visually, it may look something like this:</p>
+
+<p><img src="/assets/img/wikiqa_guardrail.svg" alt="question and answer" /></p>
+
+<p>The results are much better:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Article</th>
+      <th>Question</th>
+      <th>gpt-3.5-turbo</th>
+      <th>lmsys/fastchat-t5-3b-v1.0</th>
+      <th>google/flan-t5-xl</th>
+      <th>google/flan-t5-xxl</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>GPT-4</td>
+      <td>Who created GPT-4?</td>
+      <td>GPT-4 was created by OpenAI.</td>
+      <td>OpenAI.</td>
+      <td>OpenAI</td>
+      <td>OpenAI</td>
+    </tr>
+    <tr>
+      <td>GPT-4</td>
+      <td>How is GPT-4 better than its predecessors?</td>
+      <td>According to OpenAI, GPT-4 is “more reliable, creative, and able to handle much more nuanced instructions than GPT-3.5.” It has larger context windows of 8,192 and 32,768 tokens, is a multimodal model that can take images as well as text as input, and can use APIs when instructed to do so. It also introduced the “system message” to gain further control over its tone of voice and task.</td>
+      <td>GPT-4 is better than its predecessors in several ways:<br /> * It has a larger context window of 8,192 and 32,768 tokens, which allows it to handle more complex instructions<br /> * It is a multimodal model, which allows it to take images as well as text as input<br /> * It has a system message that allows it to specify its tone of voice and task<br /> * It can use APIs when instructed to do so, which allows it to fulfill requests beyond its normal capabilities</td>
+      <td>GPT-4 is a multimodal model: it can take images as well as text as input</td>
+      <td>GPT-4 is a multimodal model: it can take images as well as text as input</td>
+    </tr>
+    <tr>
+      <td>GPT-4</td>
+      <td>Who played in the finals?</td>
+      <td>There is no information provided in the given context to answer this question.</td>
+      <td>I don’t know</td>
+      <td>I don’t know</td>
+      <td>I don’t know</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Where was the event held? Name the city and country</td>
+      <td>The event was held in Qatar, with matches played in eight venues across five cities. The opening ceremony took place at the Al Bayt Stadium in Al Khor.</td>
+      <td>The event was held in Doha, Qatar. 🤔</td>
+      <td>Qatar 🤔</td>
+      <td>Qatar 🤔</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Who won the tournament?</td>
+      <td>Argentina won the tournament.</td>
+      <td>Argentina won the tournament.</td>
+      <td>Argentina</td>
+      <td>Argentina</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Who played in the finals?</td>
+      <td>Argentina and France played in the finals.</td>
+      <td>Argentina and France.</td>
+      <td>Argentina and France</td>
+      <td>Argentina and France</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Who had the broadcasting rights?</td>
+      <td>Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish) had the broadcasting rights for the 2022 FIFA World Cup.</td>
+      <td>The broadcasting rights for the 2022 FIFA World Cup were held by Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish).</td>
+      <td>Fox Sports 🤔</td>
+      <td>Bell Media (Canada), Fox (U.S. English), and NBCUniversal (U.S. Spanish)</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>Which two teams qualified for the knock-out round from Group D?</td>
+      <td>France and Australia qualified for the knock-out round from Group D.</td>
+      <td>France and Australia.</td>
+      <td>I don’t know ❌</td>
+      <td>France and Australia</td>
+    </tr>
+    <tr>
+      <td>2022 FIFA World Cup</td>
+      <td>How is GPT-4 better than its predecessors?</td>
+      <td>There is no information provided about GPT-4 in the given context, so it is not possible to answer this question.</td>
+      <td>I don’t know</td>
+      <td>I don’t know</td>
+      <td>I don’t know</td>
+    </tr>
+    <tr>
+      <td>Diablo IV</td>
+      <td>What classes are available?</td>
+      <td>The five classes available in Diablo IV are Barbarian, Sorceress, Druid, Rogue, and Necromancer.</td>
+      <td>Barbarian, Sorceress, Druid, Rogue, and Necromancer.</td>
+      <td>Barbarian, Sorceress, Druid, Rogue, and Necromancer</td>
+      <td>Barbarian, Sorceress, Druid, Rogue, and Necromancer</td>
+    </tr>
+    <tr>
+      <td>Diablo IV</td>
+      <td>When is the release date?</td>
+      <td>The release date for Diablo IV is June 6, 2023.</td>
+      <td>June 6, 2023.</td>
+      <td>June 6, 2023</td>
+      <td>June 6, 2023</td>
+    </tr>
+    <tr>
+      <td>Diablo IV</td>
+      <td>How is the vanishing gradient issue addressed?</td>
+      <td>There is no information provided about the vanishing gradient issue in the given context.</td>
+      <td>I don’t know</td>
+      <td>I don’t know</td>
+      <td>I don’t know</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>How does Stable Diffusion work?</td>
+      <td>Stable Diffusion is a deep learning, text-to-image model that generates detailed images conditioned on text descriptions. It is a latent diffusion model, a kind of deep generative neural network, and supports the ability to generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output. It also allows the use of prompts to partially alter existing images via inpainting and outpainting. Its code and model weights have been released publicly, and it can run on most consumer hardware equipped with a modest GPU with at least 8 GB VRAM.</td>
+      <td>Stable Diffusion works by using a latent diffusion model, a kind of deep generative neural network, to generate detailed images conditioned on text descriptions. The model can generate new images from scratch through the use of a text prompt describing elements to be included or omitted from the output, or existing images can be re-drawn by the model to incorporate new elements described by a text prompt through its diffusion-denoising mechanism. It also allows the use of prompts to partially alter existing images via inpainting and outpainting.</td>
+      <td>It is primarily used to generate detailed images conditioned on text descriptions, though it can also be applied to other tasks such as inpainting, outpainting, and generating image-to-image translations guided by a text prompt 🤔</td>
+      <td>Stable Diffusion is a deep learning, text-to-image model released in 2022. It is primarily used to generate detailed images conditioned on text descriptions, though it can also be applied to other tasks such as inpainting, outpainting, and generating image-to-image translations guided by a text prompt. 🤔</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>Who created Stable Diffusion?</td>
+      <td>Stable Diffusion was created by the start-up company Stability AI in collaboration with academic researchers and non-profit organizations.</td>
+      <td>The start-up company Stability AI in collaboration with a number of academic researchers and non-profit organizations.</td>
+      <td>Stability AI</td>
+      <td>Stability AI</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>Describe the model architecture</td>
+      <td>Stable Diffusion uses a latent diffusion model (LDM) architecture developed by the CompVis group at LMU Munich. It consists of three parts: a variational autoencoder (VAE) encoder, a U-Net block composed of a ResNet backbone, and a VAE decoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, while the U-Net block denoises the output from forward diffusion backwards to obtain a latent representation. Finally, the VAE decoder generates the final image by converting the representation back into pixel space. The model can be flexibly conditioned on a string of text, an image, or another modality, and the encoded conditioning data is exposed to denoising U-Nets via a cross-attention mechanism.</td>
+      <td>Stable Diffusion uses a kind of diffusion model (DM), called a latent diffusion model (LDM) developed by the CompVis group at LMU Munich. Introduced in 2015, diffusion models are trained with the objective of removing successive applications of Gaussian noise on training images which can be thought of as a sequence of denoising autoencoders. Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, capturing a more fundamental semantic meaning of the image. Gaussian noise is iteratively applied to the compressed latent representation during forward diffusion. The U-Net block, composed of a ResNet backbone, denoises the output from forward diffusion backwards to obtain a latent representation. Finally, the VAE decoder generates the final image by converting the representation back into pixel space. The denoising step can be flexibly conditioned on a string of text, an image, or another modality. For conditioning on text, the fixed, pretrained CLIP ViT-L/14 text encoder is used to transform text prompts to an embedding space. Researchers point to increased computational efficiency for training and generation as an advantage of LDMs.</td>
+      <td>Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder</td>
+      <td>Stable Diffusion uses a kind of diffusion model (DM), called a latent diffusion model (LDM) developed by the CompVis group at LMU Munich. Introduced in 2015, diffusion models are trained with the objective of removing successive applications of Gaussian noise on training images which can be thought of as a sequence of denoising autoencoders. Stable Diffusion consists of 3 parts: the variational autoencoder (VAE), U-Net, and an optional text encoder.</td>
+    </tr>
+    <tr>
+      <td>Stable Diffusion</td>
+      <td>Who played in the finals?</td>
+      <td>There is no information provided about any finals, so it is not possible to answer this question.</td>
+      <td>I don’t know</td>
+      <td>I don’t know</td>
+      <td>I don’t know</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Now the open source models can admit they don’t know something, instead of making up a silly answer. All the unanswerable questions correctly resulted in “I don’t know” returned from the Q&amp;A system, and all but one answerable question was marked as such. For FLAN-T5-XL, regarding the article “2022 FIFA World Cup” and the question “Which two teams qualified for the knock-out round from Group D?”, the question-checking FLAN-T5-XL determined that the question was unanswerable, when in fact it was answerable given the context. Thus, the performance of different LLMs as the question-checker needs to be considered.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+<p>For Q&amp;A over individual Wikipedia articles, the open source FastChat-T5 performs almost as well as GPT 3.5, which is very promising. Granted, this was a relatively simple task, and the questions were pretty straightforward. For more complicated Q&amp;A systems, such as over a collection of documents, I think the challenge is not just in the LLM itself, but the overall system design.</p>
+
+<p>In terms of the embedding models, this is a win for open source, since the INSTRUCTOR-XL embedding model actually performed better than OpenAI’s text-embedding-ada-002 model. This is good news, even for those who wish to use GPT 3.5/4. One can embed their potentially large collection documents offline, which (1) saves cost, and (2) allows their vector datastore to be decoupled from any embeddings updates from 3rd parties (e.g. if OpenAI modifies and/or deprecates ada-002, one must re-index their entire collection of documents).</p>
+
+<p>Overall, this is a good performance for open source models on single document Q&amp;A tasks, and I’m looking forward to further developments in the open source landscape 🚀</p>
+
+  </div><a class="u-url" href="/ai/llm-qa-eval-wikipedia/" hidden></a>
+</article>
+
+<script src="https://giscus.app/client.js"
+        data-repo="georgesung/georgesung.github.io"
+        data-repo-id="R_kgDOJaJWKA"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOJaJWKM4CWEag"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        crossorigin="anonymous"
+        async>
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Jou-ching (George) Sung</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Jou-ching (George) Sung</li><li><a class="u-email" href="mailto:georgesung@gmail.com">georgesung@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/georgesung"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">georgesung</span></a></li><li><a href="https://www.twitter.com/sungjouching"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">sungjouching</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Hi! Welcome to my site. More info about me on https://www.linkedin.com/in/georgesung/</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Fine-tuning OpenLLaMA-7B with QLoRA for instruction following | Jou-ching (George) Sung</title>
+<meta name="generator" content="Jekyll v3.9.3" />
+<meta property="og:title" content="Fine-tuning OpenLLaMA-7B with QLoRA for instruction following" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="TLDR I ran instruction fine-tuning with QLoRA on the OpenLLaMA-7B base model, using the HuggingFace library. I used a ShareGPT-based conversation dataset with the safety guardrails and alignment removed. I ran the training on a 24GB GPU (NVIDIA A10G) for ~18 hours, and the model outputs seem coherent. The trained model is available on HuggingFace Hub here, and the code for model training is available on Github here. Example inference results are available in this Colab notebook." />
+<meta property="og:description" content="TLDR I ran instruction fine-tuning with QLoRA on the OpenLLaMA-7B base model, using the HuggingFace library. I used a ShareGPT-based conversation dataset with the safety guardrails and alignment removed. I ran the training on a 24GB GPU (NVIDIA A10G) for ~18 hours, and the model outputs seem coherent. The trained model is available on HuggingFace Hub here, and the code for model training is available on Github here. Example inference results are available in this Colab notebook." />
+<link rel="canonical" href="http://localhost:4000/ai/qlora-ift/" />
+<meta property="og:url" content="http://localhost:4000/ai/qlora-ift/" />
+<meta property="og:site_name" content="Jou-ching (George) Sung" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-07-03T02:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Fine-tuning OpenLLaMA-7B with QLoRA for instruction following" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2023-07-03T02:00:00+08:00","datePublished":"2023-07-03T02:00:00+08:00","description":"TLDR I ran instruction fine-tuning with QLoRA on the OpenLLaMA-7B base model, using the HuggingFace library. I used a ShareGPT-based conversation dataset with the safety guardrails and alignment removed. I ran the training on a 24GB GPU (NVIDIA A10G) for ~18 hours, and the model outputs seem coherent. The trained model is available on HuggingFace Hub here, and the code for model training is available on Github here. Example inference results are available in this Colab notebook.","headline":"Fine-tuning OpenLLaMA-7B with QLoRA for instruction following","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/ai/qlora-ift/"},"url":"http://localhost:4000/ai/qlora-ift/"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" type="image/x-icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Jou-ching (George) Sung" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Jou-ching (George) Sung</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Fine-tuning OpenLLaMA-7B with QLoRA for instruction following</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-07-03T02:00:00+08:00" itemprop="datePublished">Jul 3, 2023
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <h2 id="tldr">TLDR</h2>
+<p>I ran instruction fine-tuning with QLoRA on the OpenLLaMA-7B base model, using the HuggingFace library. I used a ShareGPT-based conversation dataset with the safety guardrails and alignment removed. I ran the training on a 24GB GPU (NVIDIA A10G) for ~18 hours, and the model outputs seem coherent. The trained model is available on HuggingFace Hub <a href="https://huggingface.co/georgesung/open_llama_7b_qlora_uncensored">here</a>, and the code for model training is available on Github <a href="https://github.com/georgesung/llm_qlora/tree/main">here</a>. Example inference results are available in this <a href="https://colab.research.google.com/drive/1IlpeofYD9EU6dNHyKKObZhIzkBMyqlUS?usp=sharing">Colab notebook</a>.</p>
+
+<h2 id="quickstart">Quickstart</h2>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/georgesung/llm_qlora.git
+cd llm_qlora
+pip install -r requirements.txt
+python train.py configs/open_llama_7b_qlora_uncensored.yaml
+</code></pre></div></div>
+<p>This will run QLoRA training to reproduce the <a href="https://huggingface.co/georgesung/open_llama_7b_qlora_uncensored">georgesung/open_llama_7b_qlora_uncensored</a> model I trained.</p>
+
+<h2 id="motivation">Motivation</h2>
+<p>After trying out the multitude of LLMs available these days, I wanted to see the possibilities of fine-tuning an LLM myself. With the availability of powerful base LLMs (e.g. LLaMA, Falcon, MPT, etc.) and instruction tuning datasets, along with the development of LoRA and QLoRA, instruction fine-tuning a base model is increasingly accessible to more people/organizations.</p>
+
+<h2 id="setup">Setup</h2>
+<p>To start playing around with instruction fine-tuning, I decided to use OpenLLaMA-7B as a base model. Since OpenLLaMA is an open source replication of LLaMA, I can leverage much of the code/concepts the community has already done with LLaMA (e.g. when debugging an <a href="https://github.com/huggingface/transformers/issues/22794#issuecomment-1598977285"><code class="language-plaintext highlighter-rouge">eos_token</code> issue</a>). OpenLLaMA is also permissively licenced via Apache 2.0, so that’s a great bonus. I also chose the 7B model, since I think 7B models are generally powerful enough for many use cases, and not so big that it becomes too slow to experiment on.</p>
+
+<p>For the instruction tuning dataset, I decided to use <a href="https://huggingface.co/datasets/ehartford/wizard_vicuna_70k_unfiltered">ehartford/wizard_vicuna_70k_unfiltered</a>. I believe this dataset was seeded with ShareGPT data and evolved via <a href="https://arxiv.org/abs/2304.12244">Evol-Instruct</a>. This 70k conversation dataset was then pruned to remove conversations with “As an AI language model…” and moral lecturing, leaving around 35k conversations remaining. Thus, if the instruction fine-tuning is successful, the resulting LLM should not have safety/moral/alignment/etc behavior built-in (so use with care). This opens up avenues for future exploration regarding how to update the model to implement custom alignment behavior, e.g. with further supervised fine-tuning and/or RLAIF/RLHF.</p>
+
+<p>Finally, I decided to use QLoRA as the fine-tuning algorithm, as I want to see what can be accomplished with relatively accessible hardware. I fine-tuned OpenLLaMA-7B on a 24GB GPU (NVIDIA A10G) with an observed ~14GB GPU memory usage, so one could probably use a GPU with less than 24GB memory. It would be cool to see folks with consumer-grade GPUs fine-tuning 7B+ LLMs on their own PCs! I do note that an RTX 3090 also has 24GB memory 😀</p>
+
+<h2 id="concepts">Concepts</h2>
+<h1 id="pre-training-vs-instruction-fine-tuning">Pre-training vs instruction fine-tuning</h1>
+<p>From <a href="https://arxiv.org/abs/2305.11206">LIMA paper</a>, almost all the LLM’s knowledge is learned during pre-training. Instruction fine-tuning can help the model follow user instructions to make use of the pre-trained knowledge, and also output text in a particular style. Thus, I don’t expect the LLM to learn any new knowledge from the instruction tuning, but rather learn the “skills” necessary to extract its knowledge from pre-training and provide useful responses.</p>
+
+<h1 id="what-is-lora">What is LoRA?</h1>
+<p>Very broadly, <a href="https://arxiv.org/abs/2106.09685">LoRA</a> (Low-Rank Adaptation) is an algorithm that allows us to fine-tune a model using very little computational overhead, compared to standard supervised fine-tuning of the entire model. This means we can fine-tune an LLM with lower-end hardware and less training time, compared to standard fine-tuning. Note LoRA can be applied to any model, such as LLMs and image generation models like Stable Diffusion.</p>
+
+<p>First, we choose the subset of weights in the model we want to fine-tune. For fine-tuning OpenLLaMA, I chose the Q, K, V weight matrices to fine-tune (see <a href="http://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer</a> blog post for more details about Q, K, V). We observe in standard fine-tuning that the fine-tuned weight matrix can be expressed as:</p>
+
+<p>W = W<sub>0</sub> + ΔW</p>
+
+<p>LoRA trains separate parameters/weights to express ΔW, while keeping the original model’s weights W<sub>0</sub> frozen. To further reduce the trainable parameters, LoRA expresses ΔW as:</p>
+
+<p>ΔW = A * B</p>
+
+<p>where A and B are separate learned weight matrices. From LLaMA/OpenLLaMA, the Q, K, V matrices are 4096x4096, so 16M parameters each. In my LoRA config, I set the LoRA rank to 8, which means A is a 4096x8 matrix and B is a 8x4096 matrix (A*B results in a 4096x4096 matrix, representing ΔW). The number of parameters of A and B combined is 65k, which is a 256x reduction in number of parameters compared to the original W<sub>0</sub> matrix.</p>
+
+<p>Not only do we get a significant decrease in the number of trainable parameters for each Q, K, V weight matrix, we are also <em>not</em> training the other weights in the model. Overall, for the fine-tuning I ran using QLoRA on OpenLLaMA, I am only training 0.18% of the total parameters.</p>
+
+<p>Another cool thing about LoRA is that while we train separate adapters (A and B), we can <em>merge</em> the adapters back into the base model by simply adding A*B to W<sub>0</sub> (recall W = W<sub>0</sub> + ΔW). Thus, after merging the adapters with the base OpenLLaMA model, we can run inference on the merged model the same way we run inference on any LLaMA-family model, with no inference latency penalty.</p>
+
+<p>For more details about LoRA, I suggest <a href="https://lightning.ai/pages/community/tutorial/lora-llm/">this blog post</a> by Lightning AI, and the original <a href="https://arxiv.org/abs/2106.09685">LoRA paper</a>.</p>
+
+<h1 id="what-is-qlora">What is QLoRA?</h1>
+<p><a href="https://arxiv.org/abs/2305.14314">QLoRA</a> expands on LoRA by quantizing the base model to 4 bits during LoRA training. This allows us to run LoRA fine-tuning with a smaller GPU memory footprint. There is much more detail about how this algorithm works (e.g. it dequantizes the 4 bit values to 16 bits just in time for forward/backward pass, double quantization, etc.), and honestly I am still trying to wrap my head around it. In any case, I suggest you read the <a href="https://arxiv.org/abs/2305.14314">QLoRA paper</a> for more detail, and a better explanation 😛</p>
+
+<h2 id="implementation">Implementation</h2>
+<p>Concepts aside, here is how I ran instruction fine-tuning on OpenLLaMA-7B with QLoRA using HuggingFace.</p>
+
+<h1 id="qlora-configuration">QLoRA configuration</h1>
+<p>Before we load the base model, we need to set up the quantization settings for QLoRA, to be applied to the base model later.</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bnb_config</span> <span class="o">=</span> <span class="n">BitsAndBytesConfig</span><span class="p">(</span>
+    <span class="n">load_in_4bit</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="n">bnb_4bit_use_double_quant</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="n">bnb_4bit_quant_type</span><span class="o">=</span><span class="s">"nf4"</span><span class="p">,</span>
+    <span class="n">bnb_4bit_compute_dtype</span><span class="o">=</span><span class="n">torch</span><span class="p">.</span><span class="n">bfloat16</span>
+<span class="p">)</span>
+</code></pre></div></div>
+<p><a href="https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L22">View code on Github</a></p>
+
+<p>Here, we are quantizing the base model using 4 bits, with the 4-bit NormalFloat datatype proposed in the <a href="https://arxiv.org/abs/2305.14314">QLoRA paper</a>. For forward &amp; backward pass computations during training, parameters will be dequantized to <a href="https://en.wikipedia.org/wiki/Bfloat16_floating-point_format">16-bit BrainFloat</a> (<code class="language-plaintext highlighter-rouge">torch.bfloat16</code>). We will also use Double Quantization (see QLoRA paper) to save even more memory.</p>
+
+<h1 id="load-base-model--tokenizer">Load base model &amp; tokenizer</h1>
+<p>Let’s load the base model OpenLLaMA-7B and its corresponding tokenizer.</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">LlamaTokenizer</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s">"openlm-research/open_llama_7b"</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">LlamaForCausalLM</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s">"openlm-research/open_llama_7b"</span><span class="p">,</span> <span class="n">quantization_config</span><span class="o">=</span><span class="n">bnb_config</span><span class="p">,</span> <span class="n">device_map</span><span class="o">=</span><span class="p">{</span><span class="s">""</span><span class="p">:</span><span class="mi">0</span><span class="p">})</span>
+</code></pre></div></div>
+<p>Note the QLoRA config <code class="language-plaintext highlighter-rouge">bnb_config</code> is passed in as the quantization config.</p>
+
+<p>For LLaMA models, the default tokenizer does not specify a pad token, so make sure we specify one:</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">tokenizer</span><span class="p">.</span><span class="n">add_special_tokens</span><span class="p">({</span><span class="s">'pad_token'</span><span class="p">:</span> <span class="s">'[PAD]'</span><span class="p">})</span>
+</code></pre></div></div>
+<p><a href="https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L29">View code on Github</a></p>
+
+<p><em>Warning:</em> I see some examples where <code class="language-plaintext highlighter-rouge">tokenizer.pad_token = tokenizer.eos_token</code> is set. <em>Do not do this</em>. When the model is trained like this, it will never learn to output the eos_token / end-of-sequence token (see <a href="https://github.com/huggingface/transformers/issues/22794#issuecomment-1598977285">this Github issue</a>). This means the model will never stop generating tokens during inference. From my experience, this leads to the model generating an entire simulated conversation between the user and the model, when given just a single instruction.</p>
+
+<h1 id="data-pre-processing">Data pre-processing</h1>
+<p>The dataset I used was <a href="https://huggingface.co/datasets/ehartford/wizard_vicuna_70k_unfiltered">ehartford/wizard_vicuna_70k_unfiltered</a> available on HuggingFace. Examining the data, it is a collection of conversations, with each conversation structured as such (FYI I made up the conversation below just to illustrate):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[
+    {"from": "human", "value": "Hello"},
+    {"from": "gpt", "value": "Hi, how are you?"},
+    {"from": "human", "value": "I'm fine."},
+    {"from": "gpt", "value": "How can I help you?"},
+    ...
+]
+</code></pre></div></div>
+
+<p>To train the model, I need to convert the conversation to a string, so I adopted this common format:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>### HUMAN:
+Hello
+
+### RESPONSE:
+Hi, how are you?&lt;eos_token&gt;
+
+### HUMAN:
+I'm fine.
+
+### RESPONSE:
+How can I help you?&lt;eos_token&gt;
+...
+</code></pre></div></div>
+
+<p>Note I added the <code class="language-plaintext highlighter-rouge">eos_token</code> after each response, so during inference the model can stop generating tokens after it completes its response.</p>
+
+<p><a href="https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L134">View code on Github</a></p>
+
+<h1 id="lora-configuration">LoRA configuration</h1>
+<p>Now we can set up the LoRA configuration:</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">config</span> <span class="o">=</span> <span class="n">LoraConfig</span><span class="p">(</span>
+    <span class="n">r</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">lora_alpha</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+    <span class="n">target_modules</span><span class="o">=</span><span class="p">[</span><span class="s">"q_proj"</span><span class="p">,</span> <span class="s">"k_proj"</span><span class="p">,</span> <span class="s">"v_proj"</span><span class="p">],</span>
+    <span class="n">lora_dropout</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">bias</span><span class="o">=</span><span class="s">"none"</span><span class="p">,</span>
+    <span class="n">task_type</span><span class="o">=</span><span class="s">"CAUSAL_LM"</span>
+<span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">get_peft_model</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">base_model</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>As mentioned earlier, I set the LoRA rank <code class="language-plaintext highlighter-rouge">r</code> to 8, and I am tuning the Q, K, and V weight matrices <code class="language-plaintext highlighter-rouge">["q_proj", "k_proj", "v_proj"]</code>.</p>
+
+<p><a href="https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L54">View code on Github</a></p>
+
+<h1 id="run-training-loop">Run training loop</h1>
+<p>Now we run the training loop using HuggingFace’s <a href="https://huggingface.co/docs/transformers/main_classes/trainer">Trainer</a>:</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">trainer</span> <span class="o">=</span> <span class="n">transformers</span><span class="p">.</span><span class="n">Trainer</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+    <span class="n">train_dataset</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s">"train"</span><span class="p">],</span>
+    <span class="n">args</span><span class="o">=</span><span class="n">transformers</span><span class="p">.</span><span class="n">TrainingArguments</span><span class="p">(</span>
+        <span class="n">per_device_train_batch_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">gradient_accumulation_steps</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+        <span class="n">warmup_steps</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+        <span class="n">num_train_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">learning_rate</span><span class="o">=</span><span class="mf">2e-4</span><span class="p">,</span>
+        <span class="n">fp16</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">logging_steps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="o">=</span><span class="bp">self</span><span class="p">.</span><span class="n">config</span><span class="p">[</span><span class="s">"trainer_output_dir"</span><span class="p">],</span>
+        <span class="n">report_to</span><span class="o">=</span><span class="s">"tensorboard"</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">data_collator</span><span class="o">=</span><span class="n">transformers</span><span class="p">.</span><span class="n">DataCollatorForLanguageModeling</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">tokenizer</span><span class="p">,</span> <span class="n">mlm</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
+<span class="p">)</span>
+</code></pre></div></div>
+<p><a href="https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L72">View code on Github</a></p>
+
+<p>Training for one full epoch on the dataset took about 18 hours on an A10G GPU with 24 GB GPU memory.</p>
+
+<h1 id="merge-model">Merge model</h1>
+<p>After the QLoRA training is complete, we have our trained adapters. Now we can merge the adapters with the base model. I noticed there were some issues with merging the adapter with the 4-bit quantized base model, so I had to reload the base model separately before merging, as such:</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">base_model</span> <span class="o">=</span> <span class="n">LlamaForCausalLM</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s">"openlm-research/open_llama_7b"</span><span class="p">,</span> <span class="n">device_map</span><span class="o">=</span><span class="s">"cpu"</span><span class="p">)</span>
+
+<span class="n">adapter_save_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s">"</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">config</span><span class="p">[</span><span class="s">'model_output_dir'</span><span class="p">]</span><span class="si">}</span><span class="s">/</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">config</span><span class="p">[</span><span class="s">'model_name'</span><span class="p">]</span><span class="si">}</span><span class="s">_adapter"</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">PeftModel</span><span class="p">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">base_model</span><span class="p">,</span> <span class="n">adapter_save_path</span><span class="p">)</span>
+
+<span class="bp">self</span><span class="p">.</span><span class="n">merged_model</span> <span class="o">=</span> <span class="n">model</span><span class="p">.</span><span class="n">merge_and_unload</span><span class="p">()</span>
+
+<span class="n">model_save_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s">"</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">config</span><span class="p">[</span><span class="s">'model_output_dir'</span><span class="p">]</span><span class="si">}</span><span class="s">/</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">config</span><span class="p">[</span><span class="s">'model_name'</span><span class="p">]</span><span class="si">}</span><span class="s">"</span>
+<span class="bp">self</span><span class="p">.</span><span class="n">merged_model</span><span class="p">.</span><span class="n">save_pretrained</span><span class="p">(</span><span class="n">model_save_path</span><span class="p">)</span>
+<span class="bp">self</span><span class="p">.</span><span class="n">tokenizer</span><span class="p">.</span><span class="n">save_pretrained</span><span class="p">(</span><span class="n">model_save_path</span><span class="p">)</span>
+</code></pre></div></div>
+<p><a href="https://github.com/georgesung/llm_qlora/blob/7cd7ad343cf704307ef3661a14823d219f497ed7/QloraTrainer.py#L101">View code on Github</a></p>
+
+<p>After running some inference on the merged model to see if the output makes sense, I uploaded the model to HuggingFace Hub per the instructions <a href="https://huggingface.co/docs/hub/repositories-getting-started#terminal">here</a>. The merged model is available on the HuggingFace Hub as <a href="https://huggingface.co/georgesung/open_llama_7b_qlora_uncensored">georgesung/open_llama_7b_qlora_uncensored</a>.</p>
+
+<h1 id="inference-results">Inference results</h1>
+<p>To see some ad-hoc inference results I ran, look at this <a href="https://colab.research.google.com/drive/1IlpeofYD9EU6dNHyKKObZhIzkBMyqlUS?usp=sharing">Colab notebook</a>. I used a T40 GPU in Colab to run inference, and I believe the T40 GPU is available in the free version of Google Colab.</p>
+
+<p>Feel free to download the model from HuggingFace Hub and experiment yourself!</p>
+
+  </div><a class="u-url" href="/ai/qlora-ift/" hidden></a>
+</article>
+
+<script src="https://giscus.app/client.js"
+        data-repo="georgesung/georgesung.github.io"
+        data-repo-id="R_kgDOJaJWKA"
+        data-category="Announcements"
+        data-category-id="DIC_kwDOJaJWKM4CWEag"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        crossorigin="anonymous"
+        async>
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Jou-ching (George) Sung</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Jou-ching (George) Sung</li><li><a class="u-email" href="mailto:georgesung@gmail.com">georgesung@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/georgesung"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">georgesung</span></a></li><li><a href="https://www.twitter.com/sungjouching"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">sungjouching</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Hi! Welcome to my site. More info about me on https://www.linkedin.com/in/georgesung/</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
