@@ -3,8 +3,8 @@ import { getAllPosts } from "@/lib/posts";
 import { ArrowRight, Calendar, Tag } from "lucide-react";
 
 export const metadata = {
-  title: "George Sung | Machine Learning Engineer & AI Explorer",
-  description: "Personal blog and portfolio of George Sung. Dissecting AI agent architectures, instruction tuning, and LLM systems.",
+  title: "George Sung",
+  description: "Personal blog of Jou-ching (George) Sung. All views and opinions expressed are my own.",
 };
 
 export default function Home() {
@@ -19,11 +19,11 @@ export default function Home() {
             Hi, I&apos;m George Sung.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
-            I&apos;m a <strong className="text-foreground">machine learning engineer</strong> building AI agents, generative media, and model inference optimizations. On this blog, I write deep dives on agent architectures, LLM fine-tuning, and technical lessons from building in the AI ecosystem.
+            Welcome to my blog, it&apos;s about AI :) All views and opinions expressed here are my own
           </p>
           <div className="flex gap-4">
-            <Link 
-              href="/about" 
+            <Link
+              href="/about"
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors"
             >
               More about me <ArrowRight size={16} />
@@ -82,7 +82,7 @@ export default function Home() {
                 )}
 
                 <div className="mt-1">
-                  <Link 
+                  <Link
                     href={`/${post.category}/${post.slug}`}
                     className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
                   >
