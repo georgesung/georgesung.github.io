@@ -1,6 +1,7 @@
 import { getAllPosts, getPostBySlug } from "@/lib/posts";
 import { notFound } from "next/navigation";
-import { marked } from "marked";
+import { Marked } from "marked";
+import { createHighlighter } from "shiki";
 import Link from "next/link";
 
 interface PageProps {
@@ -8,6 +9,18 @@ interface PageProps {
     category: string;
     slug: string;
   }>;
+}
+
+let highlighterInstance: any = null;
+
+async function getHighlighter() {
+  if (!highlighterInstance) {
+    highlighterInstance = await createHighlighter({
+      themes: ["github-dark", "github-light"],
+      langs: ["python", "bash", "json", "yaml", "markdown", "plaintext"],
+    });
+  }
+  return highlighterInstance;
 }
 
 export async function generateStaticParams() {
@@ -42,8 +55,30 @@ export default async function PostPage({ params }: PageProps) {
     notFound();
   }
 
-  // Parse markdown to HTML
-  const htmlContent = await marked.parse(post.content);
+  // Parse markdown to HTML using Shiki highlighter
+  const highlighter = await getHighlighter();
+  const markedInstance = new Marked();
+
+  markedInstance.use({
+    renderer: {
+      code(token: { text: string; lang?: string; escaped?: boolean }) {
+        const language = token.lang || "plaintext";
+        const supportedLangs = ["python", "bash", "json", "yaml", "markdown", "plaintext"];
+        const finalLang = supportedLangs.includes(language) ? language : "plaintext";
+
+        return highlighter.codeToHtml(token.text, {
+          lang: finalLang,
+          themes: {
+            light: "github-light",
+            dark: "github-dark",
+          },
+          defaultColor: "light",
+        });
+      },
+    },
+  });
+
+  const htmlContent = await markedInstance.parse(post.content);
 
   return (
     <article className="container max-w-4xl mx-auto px-4 py-12 md:py-16">

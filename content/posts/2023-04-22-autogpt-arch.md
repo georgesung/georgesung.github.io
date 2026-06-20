@@ -14,7 +14,7 @@ Recently I've found myself completely hooked experimenting with [AutoGPT](https:
 
 # Workflow
 1. User (the human) defines the name of the AI agent, and specifies up to 5 goals, e.g. users of AutoGPT will see the following in their terminal (complete example in the Appendix under "*Example terminal message for initial user input*")
-```
+```plaintext
 Welcome to Auto-GPT!  Enter the name of your AI and its role below.
 ...
 Enter up to 5 goals for your AI:
@@ -34,7 +34,7 @@ Goal 2: ...
 
 ## Commands
 One fascinating and very powerful aspect of agentic AI is its ability to issue and execute commands. In AutoGPT, the LLM system (ChatGPT) is made aware of the available commands and their functionality via the following text in the prompt:
-```
+```plaintext
 Commands:
 1. Google Search: "google", args: "input": "<search>"
 2. Browse Website: "browse_website", args: "url": "<url>", "question": "<what_you_want_to_find_on_website>"
@@ -64,7 +64,7 @@ I find this a very powerful concept, since one can extend the suite of commands 
 
 ## Appendix
 # Example terminal message for initial user input
-```
+```plaintext
 Welcome to Auto-GPT!  Enter the name of your AI and its role below. Entering nothing will load defaults.
 Name your AI:  For example, 'Entrepreneur-GPT'
 AI Name: Foo
@@ -89,7 +89,7 @@ messages = [
 ]
 ```
 will be printed as:
-```
+```plaintext
 system: foo
 
 user: bar1
@@ -98,7 +98,7 @@ assistant: bar2
 ```
 
 # Example initial prompt
-```
+```plaintext
 system: You are Foo, an AI that recommends tennis equipment for a specific player
 Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies with no legal complications.
 
@@ -196,7 +196,7 @@ user: Determine which next command to use, and respond using the format specifie
 ```
 
 # Example prompt with memories
-```
+```plaintext
 system: You are Foo, an AI that recommends tennis equipment for a specific player
 Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies with no legal complications.
 

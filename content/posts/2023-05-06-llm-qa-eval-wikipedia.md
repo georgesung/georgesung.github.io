@@ -103,7 +103,7 @@ Overall, OpenAI GPT 3.5 performed the best. Apart from the "trick questions" (qu
 Can we just dismiss the open source LLMs from here? Not necessarily. I ran the open source LLMs in a straightforward manner, without any special guardrails. Under the hood, I am guessing OpenAI has created guardrails around the raw GPT 3.5 LLM model, so the results served by the GPT 3.5 API are safe, free of hallucination, non-toxic, etc. Back to answering the trick questions, one simple guardrail I found was to use the LLM itself to determine if a question can be answered given the context.
 
 In a separate LLM invocation, let's call it the "question-checking" LLM (as opposed to "question-answering" LLM), we can slightly modify [LangChain's default Q&A prompt](https://github.com/hwchase17/langchain/blob/v0.0.160/langchain/chains/retrieval_qa/prompt.py#L4) to the following:
-```
+```plaintext
 """Given the following pieces of context, determine if the question is able to be answered by the information in the context.
 Respond with 'yes' or 'no'.
 {context}
