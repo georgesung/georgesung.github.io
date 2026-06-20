@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, ExternalLink, Brain } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { Github, Linkedin } from "@/components/icons";
 
 export const metadata = {
@@ -27,18 +27,6 @@ export default function AboutPage() {
 
           <div className="flex flex-col gap-2 w-full max-w-[200px]">
             <a
-              href="https://github.com/georgesung"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80 transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                <Github size={16} /> GitHub
-              </span>
-              <ExternalLink size={14} className="opacity-60" />
-            </a>
-
-            <a
               href="https://www.linkedin.com/in/georgesung/"
               target="_blank"
               rel="noopener noreferrer"
@@ -51,13 +39,25 @@ export default function AboutPage() {
             </a>
 
             <a
+              href="https://github.com/georgesung"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <Github size={16} /> GitHub
+              </span>
+              <ExternalLink size={14} className="opacity-60" />
+            </a>
+
+            <a
               href="https://huggingface.co/georgesung"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-between px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80 transition-colors"
             >
               <span className="flex items-center gap-2">
-                <Brain size={16} /> HuggingFace
+                <span className="text-[16px] leading-none select-none" aria-hidden="true">🤗</span> HuggingFace
               </span>
               <ExternalLink size={14} className="opacity-60" />
             </a>

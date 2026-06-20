@@ -80,15 +80,6 @@ export default function RootLayout({
 
               <div className="flex items-center gap-2">
                 <a 
-                  href="https://github.com/georgesung" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="p-2 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="GitHub"
-                >
-                  <Github size={20} />
-                </a>
-                <a 
                   href="https://www.linkedin.com/in/georgesung/" 
                   target="_blank" 
                   rel="noopener noreferrer" 
@@ -96,6 +87,15 @@ export default function RootLayout({
                   aria-label="LinkedIn"
                 >
                   <Linkedin size={20} />
+                </a>
+                <a 
+                  href="https://github.com/georgesung" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="p-2 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="GitHub"
+                >
+                  <Github size={20} />
                 </a>
                 <ThemeToggle />
               </div>
