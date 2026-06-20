@@ -107,12 +107,7 @@ export default function RootLayout({
 
         <footer className="border-t border-border bg-muted/30">
           <div className="container max-w-4xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} George Sung. All rights reserved.</p>
-            <p>
-              Built with{" "}
-              <span className="text-foreground font-medium">Next.js 16</span> &{" "}
-              <span className="text-foreground font-medium">Tailwind v4</span>
-            </p>
+            <p>© {new Date().getFullYear()} Jou-ching (George) Sung. All rights reserved.</p>
           </div>
         </footer>
       </body>
