@@ -59,7 +59,7 @@ export default function RootLayout({
               href="/" 
               className="text-lg font-bold tracking-tight hover:opacity-85 transition-opacity"
             >
-              georgesung.github.io
+              georgesung.com
             </Link>
 
             <nav className="flex items-center gap-6">
