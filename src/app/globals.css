@@ -251,3 +251,28 @@ pre.shiki code {
   font-size: inherit;
   font-family: var(--font-mono);
 }
+
+/* Styling for Markdown tables */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+}
+
+.prose th {
+  background-color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+}
+
+.prose tr:nth-child(even) {
+  background-color: var(--muted);
+}
