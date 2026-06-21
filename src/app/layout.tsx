@@ -4,6 +4,7 @@ import "./globals.css";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Linkedin } from "@/components/icons";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -53,6 +54,19 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-200">
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-JBMPXGG0W6"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-JBMPXGG0W6');
+          `}
+        </Script>
         <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm">
           <div className="container max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
             <Link 
