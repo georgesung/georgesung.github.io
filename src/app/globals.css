@@ -177,6 +177,12 @@
   margin-bottom: 0.5rem;
 }
 
+.prose li > ul,
+.prose li > ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
 .prose blockquote {
   border-left: 4px solid var(--border);
   padding-left: 1rem;
