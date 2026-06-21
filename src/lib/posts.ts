@@ -54,8 +54,8 @@ export function getAllPosts(): Post[] {
       // Generate excerpt: look for TLDR first, or just strip some markdown/html
       let excerpt = "";
       if (content) {
-        // Try to find a TLDR section
-        const tldrMatch = content.match(/##\s+TLDR\s*\n+([\s\S]*?)(?=\n##|$)/i);
+        // Try to find a TLDR section (supporting H1 `# TLDR` or H2 `## TLDR`)
+        const tldrMatch = content.match(/(?:^|\n)#{1,2}\s+TLDR\s*\r?\n+([\s\S]*?)(?=\r?\n#{1,6}|$)/i);
         if (tldrMatch) {
           excerpt = tldrMatch[1].trim();
         } else {
