@@ -1,6 +1,6 @@
-# georgesung.github.io (Next.js & Tailwind CSS v4 Portfolio Blog)
+# My personal website/blog at georgesung.com
 
-Welcome to the Next.js port of my personal portfolio and technical blog. This site is built using **Next.js (v16)**, **React (v19)**, **Tailwind CSS (v4)**, and **shadcn/ui**, presenting a sleek, ultra-modern, and blazing-fast minimalist developer experience.
+Welcome to my personal website and blog. This site is built using **Next.js (v16)**, **React (v19)**, **Tailwind CSS (v4)**, and **shadcn/ui**.
 
 ---
 
@@ -35,7 +35,7 @@ npm run start
 
 ## 🏗️ Repository Structure & Architecture
 
-The site transitions from an unmaintained Jekyll build to a lightweight, zero-magic **compile-time Markdown parser** designed to be framework-agnostic and resilient to future updates.
+The site uses a lightweight, zero-magic **compile-time Markdown parser** designed to be framework-agnostic and resilient to future updates.
 
 ### Key Directories & Files:
 * **`content/posts/`**: Holds all markdown articles. This is the source-of-truth directory for your blog posts.
@@ -66,7 +66,7 @@ All articles live in `content/posts/`. To write a new post:
    ---
    layout: post
    title: "Building Agentic RAG: Practical Patterns"
-   date: 2026-06-20 12:00:00 +0000
+   date: 2026-06-20
    categories: AI
    ---
    ```
@@ -81,7 +81,7 @@ All articles live in `content/posts/`. To write a new post:
 
 ### 2. How to Edit an Article
 * Simply open and modify any Markdown file in `content/posts/`.
-* **Excerpts / Article TL;DR**: The content loader is designed to automatically extract a post summary. It first looks for a `## TLDR` section in your article and uses its content. If not found, it falls back to parsing the first non-header paragraph of your content, cleaning markdown links and formatting to construct a polished plain-text snippet.
+* **Excerpts / Article TL;DR**: The content loader is designed to automatically extract a post summary. It first looks for a `# TLDR` section in your article and uses its content. If not found, it falls back to parsing the first non-header paragraph of your content, cleaning markdown links and formatting to construct a polished plain-text snippet.
 
 ### 3. How to Update the About Me Page
 The About page is styled inside `src/app/about/page.tsx`.
