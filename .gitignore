@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Gemini CLI
 .gemini
+
+# My hidden stash so git doesn't go crazy
+gsung_stash
