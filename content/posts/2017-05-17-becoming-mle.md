@@ -16,7 +16,7 @@ The past year has been quite a journey for me. A year ago I left my full-time jo
 
 For those considering a career change, possibly leaving their full-time job, maybe my story can serve as inspiration and provide some useful pointers. For those who are just curious, I think my story would at least be an interesting data point :)
 
-![employee car program](/assets/img/2017-george-bmw.webp)
+<img src="/assets/img/2017-george-bmw.webp" alt="employee car program" style="width: 80%;" />
 *One of the perks for working at BMW, the “employee car program”*
 
 # My background
