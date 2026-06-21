@@ -699,3 +699,530 @@ For clarity, the LLM prompt to generate suggestions for the user’s next messag
 
 In the case above, there might have been a bug somewhere, as I was unable to find the LLM response with the user prompt suggestions. That’s ok though, because I see it at the end of my next test case. So let’s take a look at my second test case.
 
+## Test case 2: Explain codebase
+As mentioned earlier, I wanted a test case where I can see a sub-agent in action — how a sub-agent is spawned/de-spawned, how control is passed between main agent and sub-agent, etc. Fortunately, I was able to see a codebase explorer sub-agent in action for this test case, where I prompted Claude Code with:
+
+*“Tell me about this codebase”*
+
+### Initial setup
+The initial setup requests/responses are the same as before:
+
+- Call the lightweight LLM to generate a title for the conversation, and determine the topic of the request (if there is a new topic)
+- In parallel, call the heavyweight LLM with a dummy request to “warm it up” via cache pre-fill (that’s my guess)
+- For brevity, I will omit the requests/responses here, but you can check the [full printouts](https://gist.github.com/georgesung/056c6ac77ff31d96dc3d527a3251cdf8) from Ollama if you’re interested.
+
+### Start main agent
+The main agent is initiated similarly as before:
+```json
+[REQ]
+{
+...
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "text": <same initial system-reminder message with CLAUDE.md contents>,
+          "type": "text"
+        },
+        {
+          "cache_control": {
+            "type": "ephemeral"
+          },
+          "text": "Tell me about this codebase",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "system": <main agent system prompt>,
+  ...
+  "tools": <main agent tool list>,
+...
+}
+
+[RESP]
+{
+...
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "The user wants to know about this codebase. Let me explore it to understand its structure and purpose."
+    },
+    {
+      "type": "tool_use",
+      "id": "call_eev71b93",
+      "name": "Task",
+      "input": {
+        "description": "Explore codebase structure",
+        "prompt": "Explore this codebase thoroughly to understand its structure, purpose, and main components. Look at:\n1. The overall directory structure\n2. Main configuration files (setup.py, requirements.txt, pyproject.toml, etc.)\n3. Key source files and their purposes\n4. Any documentation (README, etc.)\n5. The technology stack being used\n\nProvide a comprehensive overview of what this codebase is about, its architecture, and key components.",
+        "subagent_type": "Explore"
+      }
+    }
+  ],
+...
+}
+```
+
+From the LLM response, we can see a “Task” tool call, which will spawn an “Explore” sub-agent to “Explore codebase structure”, with the following objectives:
+
+> Explore this codebase thoroughly to understand its structure, purpose, and main components. Look at:
+> 1. The overall directory structure
+> 2. Main configuration files (setup.py, requirements.txt, pyproject.toml, etc.)
+> 3. Key source files and their purposes
+> 4. Any documentation (README, etc.)
+> 5. The technology stack being used
+>
+> Provide a comprehensive overview of what this codebase is about, its architecture, and key components.
+
+### Start codebase explorer sub-agent
+Now Claude Code spawns a sub-agent of the “Explore” type to explore my codebase. We can see the following LLM request/response:
+```json
+[REQ]
+{
+...
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "text": <same initial system-reminder message with CLAUDE.md contents>,
+          "type": "text"
+        },
+        {
+          "cache_control": {
+            "type": "ephemeral"
+          },
+          "text": "Explore this codebase thoroughly to understand its structure, purpose, and main components. Look at:\n1. The overall directory structure\n2. Main configuration files (setup.py, requirements.txt, pyproject.toml, etc.)\n3. Key source files and their purposes\n4. Any documentation (README, etc.)\n5. The technology stack being used\n\nProvide a comprehensive overview of what this codebase is about, its architecture, and key components.",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "system": <Explore sub-agent system prompt>,
+  ...
+  "tools": <Explore sub-agent tool list>,
+...
+}
+
+[RESP]
+{
+...
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "The user wants me to thoroughly explore this codebase to understand its structure, purpose, and main components. Let me start by examining the directory structure and then dive into key files.\n\nI'll need to:\n1. First, look at the overall directory structure\n2. Find configuration files (setup.py, requirements.txt, pyproject.toml, etc.)\n3. Read key source files\n4. Read documentation (README, etc.)\n5. Understand the technology stack\n\nLet me start with parallel searches to understand the structure."
+    },
+    {
+      "type": "text",
+      "text": "I'll explore this codebase thoroughly. Let me start by examining the directory structure and key files in parallel."
+    },
+    {
+      "type": "tool_use",
+      "id": "call_fg68lx93",
+      "name": "Bash",
+      "input": {
+        "command": "ls -la /path/to/project/llm_qlora",
+        "description": "List directory contents"
+      }
+    },
+    {
+      "type": "tool_use",
+      "id": "call_8t9w7t85",
+      "name": "Glob",
+      "input": {
+        "pattern": "**/*",
+        "path": "/path/to/project/llm_qlora"
+      }
+    },
+    {
+      "type": "tool_use",
+      "id": "call_smf1trca",
+      "name": "Glob",
+      "input": {
+        "pattern": "*.{py,txt,toml,yaml,yml,md,json}",
+        "path": "/path/to/project/llm_qlora"
+      }
+    }
+  ],
+...
+}
+```
+
+From the request, we can see:
+
+- The second user message is the “prompt” argument of the “Task” tool call from the main agent, which are the instructions/objectives for the codebase explorer agent
+- The system prompt is specific to the “Explore” sub-agent type (see Appendix for full system prompt)
+- The tool list is a subset of the main agent’s tool list. Since the “Explore” sub-agent is a read-only agent (should not change any files), it should not have access to tools like “Edit”, “Write”, etc. (see Appendix for full tool list)
+- The tool list includes “Bash” and “Skill”, which might allow it to accidentally write something (there are prompts to reduce this likelihood, and likely further guardrails within Claude Code itself)
+- From the system prompt, Claude Code intends to use the lightweight LLM (Haiku 4.5) for this sub-agent. However, I routed all LLM calls to GLM 4.7, as mentioned earlier.
+
+From the response, we can see the LLM requests to make three parallel tool calls, to understand the directory structure and key files in this codebase:
+
+- Bash: `ls -la /path/to/project/llm_qlora`
+- Glob `**/*`
+- Glob `*.{py,txt,toml,yaml,yml,md,json}`
+
+Interesting observation: For the output of the “Bash” tool call (`ls -la` in this case), Claude Code makes an LLM call to “Extract any file paths that this command reads or modifies”, except for commands like “ls”. So in this case, it basically returns null, but I’ll include the request/response here anyway since it was pretty interesting.
+
+```json
+[REQ]
+{
+...
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "text": "Command: ls -la /path/to/project/llm_qlora\nOutput: total 112\ndrwxr-xr-x  13 george  staff    416 Jan 24 20:18 .\ndrwxr-xr-x   5 george  staff    160 Jan 22 19:08 ..\ndrwxr-xr-x  12 george  staff    384 Jan 24 20:23 .git\n-rw-r--r--   1 george  staff     74 Jan 22 19:38 CLAUDE.md\n-rw-r--r--   1 george  staff   1080 Jan 22 19:09 LICENSE\n-rw-r--r--   1 george  staff   6421 Jan 24 20:18 QloraTrainer.py\n-rw-r--r--   1 george  staff   3001 Jan 22 19:09 README.md\ndrwxr-xr-x   7 george  staff    224 Jan 22 19:09 configs\ndrwxr-xr-x   6 george  staff    192 Jan 22 19:09 data_processor\n-rw-r--r--   1 george  staff  22329 Jan 22 19:09 inference.ipynb\n-rw-r--r--   1 george  staff   1894 Jan 22 19:09 inference.py\n-rw-r--r--   1 george  staff    103 Jan 22 19:09 requirements.txt\n-rw-r--r--   1 george  staff    733 Jan 22 19:09 train.py\n\n",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "system": [
+    {
+      "text": "You are Claude Code, Anthropic's official CLI for Claude.",
+      "type": "text"
+    },
+    {
+      "text": "Extract any file paths that this command reads or modifies. For commands like \"git diff\" and \"cat\", include the paths of files being shown. Use paths verbatim -- don't add any slashes or try to resolve them. Do not try to infer paths that were not explicitly listed in the command output.\n\nIMPORTANT: Commands that do not display the contents of the files should not return any filepaths. For eg. \"ls\", pwd\", \"find\". Even more complicated commands that don't display the contents should not be considered: eg \"find . -type f -exec ls -la {} + | sort -k5 -nr | head -5\"\n\nFirst, determine if the command displays the contents of the files. If it does, then \u003cis_displaying_contents\u003e tag should be true. If it does not, then \u003cis_displaying_contents\u003e tag should be false.\n\nFormat your response as:\n\u003cis_displaying_contents\u003e\ntrue\n\u003c/is_displaying_contents\u003e\n\n\u003cfilepaths\u003e\npath/to/file1\npath/to/file2\n\u003c/filepaths\u003e\n\nIf no files are read or modified, return empty filepaths tags:\n\u003cfilepaths\u003e\n\u003c/filepaths\u003e\n\nDo not include any other text in your response.",
+      "type": "text"
+    }
+  ],
+...
+}
+
+[RESP]
+{
+...
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "The user is asking me to extract file paths from a command that reads or modifies files. Let me analyze this command:\n\nCommand: `ls -la /path/to/project/llm_qlora`\n\nThis is an `ls` command which lists files and directories. It does NOT display the contents of any files. It only shows:\n- file/directory names\n- permissions\n- owner\n- group\n- size\n- modification date\n\nAccording to the instructions:\n\"IMPORTANT: Commands that do not display the contents of the files should not return any filepaths. For eg. \"ls\", pwd\", \"find\".\"\n\nThe instruction explicitly states that `ls` should not return any filepaths because it doesn't display file contents.\n\nSo:\n- \u003cis_displaying_contents\u003e should be false\n- \u003cfilepaths\u003e should be empty"
+    },
+    {
+      "type": "text",
+      "text": "\u003cis_displaying_contents\u003e\nfalse\n\u003c/is_displaying_contents\u003e\n\n\u003cfilepaths\u003e\n\u003c/filepaths\u003e"
+    }
+  ],
+...
+}
+```
+
+The response was just this:
+```xml
+<is_displaying_contents>
+false
+</is_displaying_contents>
+
+<filepaths>
+</filepaths>
+```
+
+Back to the results of those three tool calls — the `ls -la` and two `glob` commands (match the tool call IDs in the assistant/user messages):
+```json
+[REQ]
+{
+...
+  "messages": [
+    ...
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "signature": "",
+          "thinking": "The user wants me to thoroughly explore this codebase to understand its structure, purpose, and main components. Let me start by examining the directory structure and then dive into key files.\n\nI'll need to:\n1. First, look at the overall directory structure\n2. Find configuration files (setup.py, requirements.txt, pyproject.toml, etc.)\n3. Read key source files\n4. Read documentation (README, etc.)\n5. Understand the technology stack\n\nLet me start with parallel searches to understand the structure.",
+          "type": "thinking"
+        },
+        {
+          "text": "I'll explore this codebase thoroughly. Let me start by examining the directory structure and key files in parallel.",
+          "type": "text"
+        },
+        {
+          "id": "call_fg68lx93",
+          "input": {
+            "command": "ls -la /path/to/project/llm_qlora",
+            "description": "List directory contents"
+          },
+          "name": "Bash",
+          "type": "tool_use"
+        },
+        {
+          "id": "call_8t9w7t85",
+          "input": {
+            "path": "/path/to/project/llm_qlora",
+            "pattern": "**/*"
+          },
+          "name": "Glob",
+          "type": "tool_use"
+        },
+        {
+          "cache_control": {
+            "type": "ephemeral"
+          },
+          "id": "call_smf1trca",
+          "input": {
+            "path": "/path/to/project/llm_qlora",
+            "pattern": "*.{py,txt,toml,yaml,yml,md,json}"
+          },
+          "name": "Glob",
+          "type": "tool_use"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "content": "/path/to/project/llm_qlora/README.md\n/path/to/project/llm_qlora/configs/llama2_7b_chat_uncensored.yaml\n<...removed for brevity...>",
+          "tool_use_id": "call_smf1trca",
+          "type": "tool_result"
+        },
+        {
+          "content": "/path/to/project/llm_qlora/.git/info/exclude\n/path/to/project/llm_qlora/.git/description\n<...removed for brevity...>",
+          "tool_use_id": "call_8t9w7t85",
+          "type": "tool_result"
+        },
+        {
+          "cache_control": {
+            "type": "ephemeral"
+          },
+          "content": "total 112\ndrwxr-xr-x  13 george  staff    416 Jan 24 20:18 .\ndrwxr-xr-x   5 george  staff    160 Jan 22 19:08 ..\ndrwxr-xr-x  12 george  staff    384 Jan 24 20:23 .git\n<...removed for brevity...>\u003csystem-reminder\u003e\nCRITICAL: This is a READ-ONLY task. You CANNOT edit, write, or create files.\n\u003c/system-reminder\u003e",
+          "is_error": false,
+          "tool_use_id": "call_fg68lx93",
+          "type": "tool_result"
+        }
+      ]
+    }
+  ],
+...
+}
+
+[RESP]
+{
+...
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "Now I have a good view of the directory structure. Let me read the key files to understand the codebase better:\n1. README.md - for documentation\n2. requirements.txt - for dependencies\n3. train.py - main training script\n4. inference.py - inference script\n5. QloraTrainer.py - core trainer class\n6. DataProcessor.py - base data processor\n7. Config files to understand the model configurations\n\nLet me read these files in parallel."
+    },
+    {
+      "type": "text",
+      "text": "Now let me read the key files to understand the codebase structure, purpose, and components."
+    },
+    {
+      "type": "tool_use",
+      "id": "call_kup1duad",
+      "name": "Read",
+      "input": {
+        "file_path": "/path/to/project/llm_qlora/README.md"
+      }
+    },
+    {
+      "type": "tool_use",
+      "id": "call_etbl20kz",
+      "name": "Read",
+      "input": {
+        "file_path": "/path/to/project/llm_qlora/requirements.txt"
+      }
+    },
+    {
+      "type": "tool_use",
+      "id": "call_ku6slgzz",
+      "name": "Read",
+      "input": {
+        "file_path": "/path/to/project/llm_qlora/train.py"
+      }
+    },
+    {
+      "type": "tool_use",
+      "id": "call_gzdahuix",
+      "name": "Read",
+      "input": {
+        "file_path": "/path/to/project/llm_qlora/inference.py"
+      }
+    },
+    {
+      "type": "tool_use",
+      "id": "call_68juv36a",
+      "name": "Read",
+      "input": {
+        "file_path": "/path/to/project/llm_qlora/QloraTrainer.py"
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+...
+}
+```
+
+After getting an idea of the directory structure, the agent will now read the contents of relevant files. For brevity, I won’t paste the printout snippets here, but the codebase explorer agent goes through a couple more iterations of reading various files in the codebase. For those curious, please refer to the [full LLM request/response printout from Ollama](https://gist.github.com/georgesung/056c6ac77ff31d96dc3d527a3251cdf8).
+
+After reading multiple files in the codebase, the codebase explorer agent has come to its conclusion. The sub-agent’s final output is a markdown report titled “Comprehensive Codebase Overview”:
+```json
+[RESP]
+{
+...
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "I now have a comprehensive understanding of this codebase. Let me provide a thorough overview for the user."
+    },
+    {
+      "type": "text",
+      "text": "## Comprehensive Codebase Overview\n\n<...removed for brevity...>"
+    }
+  ],
+  "stop_reason": "end_turn",
+...
+}
+```
+
+Note the stop_reason is end_turn, which signifies that the sub-agent has completed its task, and control returns to the main/parent agent.
+
+### Control returns to main agent
+The main agent receives the result of the sub-agent via a user message in the LLM request. It also receives the agent ID of the sub-agent “for resuming to continue this agent’s work if needed”, which is pretty cool.
+```json
+[REQ]
+{
+...
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "text": <system-reminder message>,
+          "type": "text"
+        },
+        {
+          "text": "Tell me about this codebase",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "thinking": "The user wants to know about this codebase. Let me explore it to understand its structure and purpose.",
+          "type": "thinking"
+        },
+        {
+          "cache_control": {
+            "type": "ephemeral"
+          },
+          "id": "call_eev71b93",
+          "input": {
+            "description": "Explore codebase structure",
+            "prompt": <...removed for brevity...>,
+            "subagent_type": "Explore"
+          },
+          "name": "Task",
+          "type": "tool_use"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "cache_control": {
+            "type": "ephemeral"
+          },
+          "content": [
+            {
+              "text": "## Comprehensive Codebase Overview\n\n<...removed for brevity...>",
+              "type": "text"
+            },
+            {
+              "text": "agentId: a09479d (for resuming to continue this agent's work if needed)",
+              "type": "text"
+            }
+          ],
+          "tool_use_id": "call_eev71b93",
+          "type": "tool_result"
+        }
+      ]
+    }
+  ],
+  "system": <main agent system prompt>,
+  ...
+  "tools": <main agent tool list>,
+...
+}
+
+[RESP]
+{
+...
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "The agent provided a comprehensive overview of the codebase. Let me summarize this information for the user in a clear, concise way."
+    },
+    {
+      "type": "text",
+      "text": "## Codebase Overview\n\nThis is a **QLoRA (Quantized Low-Rank Adaptation)** fine-tuning framework for Large Language Models. <...removed for brevity...>"
+    }
+  ],
+  "stop_reason": "end_turn",
+...
+}
+```
+
+From the response, stop_reason = end_turn, so the main agent’s work is done! The user’s request is fulfilled. The final response text gets shown to the user at the end.
+
+![done](/assets/img/tracing-cc-3.jpg)
+
+As before, Claude Code will try to generate suggestions for the user’s next prompt via the same request as in the previous example:
+```json
+[REQ]
+{
+...
+  "messages": [
+...
+    {
+      "role": "user",
+      "content": [
+        {
+          "cache_control": {
+            "type": "ephemeral"
+          },
+          "text": "[SUGGESTION MODE: Suggest what the user might naturally type next into Claude Code.]<rest of user message suggestion prompt>",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+
+[RESP]
+{
+...
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "The user just asked for an overview of the codebase, and I provided a comprehensive summary. Looking at the conversation:\n\n1. User asked \"Tell me about this codebase\"\n2. I explored and provided a detailed overview\n\nThis was an informational request that has been completed. The user now understands what the codebase is. What would they naturally type next?\n\nThere's no obvious next step here. The user might:\n- Ask a follow-up question about how to use it\n- Ask to modify something\n- Ask to run something\n- Just read the summary and decide what they want to do\n\nSince the user's intent is unclear and there's no obvious continuation from just getting information, I should stay silent. This isn't a task completion situation where \"commit this\" or \"run it\" would make sense - the user was just gathering information."
+    },
+    {
+      "type": "text",
+      "text": "(no suggestion - informational request complete, user's intent unclear)"
+    }
+  ],
+  "stop_reason": "end_turn",
+...
+}
+```
+
+# Final thoughts
+I hope this gave you some insight into the mechanics of how Claude Code works.
+
+As I could only observe the LLM requests and responses, this only paints a partial picture of what is going on. Furthermore, the test cases I ran were very simple, and I am curious about how Claude Code would work for more complex scenarios. I’m looking forward to learning more!
+
+# Appendix
+Since this blog post is already way too long, I will refer you to the Appendix I wrote on Substack [here](https://georgesung.substack.com/i/185830843/appendix). The Appendix includes:
+- System prompt - Main agent
+- System prompt - Codebase explorer sub-agent
+- Tool list - Main agent
+- Tool list - Codebase explorer sub-agent
+
+Thanks for reading!
