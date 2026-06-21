@@ -80,6 +80,53 @@ export default function AboutPage() {
             </p>
           </div>
 
+          {/* Professional Experience Timeline */}
+          <div className="space-y-6 pt-2">
+            <div className="relative pl-6 border-l-2 border-border">
+              <div className="absolute -left-[6px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary" />
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-1">
+                <h4 className="text-lg font-bold text-foreground">GAZAI (generative media AI startup)</h4>
+                <span className="text-sm font-semibold text-primary">2025+</span>
+              </div>
+              <p className="text-base text-muted-foreground">
+                AI agents, LLM post-training, AI model inference optimization
+              </p>
+            </div>
+
+            <div className="relative pl-6 border-l-2 border-border">
+              <div className="absolute -left-[6px] top-1.5 w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-1">
+                <h4 className="text-lg font-bold text-foreground">Amazon</h4>
+                <span className="text-sm font-semibold text-muted-foreground">2020 – 2024</span>
+              </div>
+              <p className="text-base text-muted-foreground">
+                Machine learning for large scale recommender systems
+              </p>
+            </div>
+
+            <div className="relative pl-6 border-l-2 border-border">
+              <div className="absolute -left-[6px] top-1.5 w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-1">
+                <h4 className="text-lg font-bold text-foreground">BMW</h4>
+                <span className="text-sm font-semibold text-muted-foreground">2017 – 2020</span>
+              </div>
+              <p className="text-base text-muted-foreground">
+                Reinforcement learning and deep learning for autonomous driving
+              </p>
+            </div>
+
+            <div className="relative pl-6 border-l-2 border-border">
+              <div className="absolute -left-[6px] top-1.5 w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-1">
+                <h4 className="text-lg font-bold text-foreground">AMD</h4>
+                <span className="text-sm font-semibold text-muted-foreground">2009 – 2016</span>
+              </div>
+              <p className="text-base text-muted-foreground">
+                Semiconductor chip design
+              </p>
+            </div>
+          </div>
+
           <div className="border-t pt-6 border-border">
             <h3 className="text-lg font-bold text-foreground mb-3">More</h3>
             <p className="text-sm text-muted-foreground mb-4">
