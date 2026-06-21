@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Github, Linkedin } from "@/components/icons";
+import { Linkedin } from "@/components/icons";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -64,12 +64,6 @@ export default function RootLayout({
 
             <nav className="flex items-center gap-6">
               <Link 
-                href="/" 
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Blog
-              </Link>
-              <Link 
                 href="/about" 
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -87,15 +81,6 @@ export default function RootLayout({
                   aria-label="LinkedIn"
                 >
                   <Linkedin size={20} />
-                </a>
-                <a 
-                  href="https://github.com/georgesung" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="p-2 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="GitHub"
-                >
-                  <Github size={20} />
                 </a>
                 <ThemeToggle />
               </div>
