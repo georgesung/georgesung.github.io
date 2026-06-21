@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "AI Agents: AutoGPT architecture & breakdown"
-date: 2023-04-22 22:54:41 +0100
+date: 2023-04-22
 categories: AI
 ---
 
@@ -40,7 +40,7 @@ Commands:
 2. Browse Website: "browse_website", args: "url": "<url>", "question": "<what_you_want_to_find_on_website>"
 3. Start GPT Agent: "start_agent", args: "name": "<name>", "task": "<short_task_desc>", "prompt": "<prompt>"
 4. Message GPT Agent: "message_agent", args: "key": "<key>", "message": "<message>"
-5. List GPT Agents: "list_agents", args: 
+5. List GPT Agents: "list_agents", args:
 6. Delete GPT Agent: "delete_agent", args: "key": "<key>"
 7. Clone Repository: "clone_repository", args: "repository_url": "<url>", "clone_path": "<directory>"
 8. Write to file: "write_to_file", args: "file": "<file>", "text": "<text>"
@@ -55,7 +55,7 @@ Commands:
 17. Generate Image: "generate_image", args: "prompt": "<prompt>"
 18. Send Tweet: "send_tweet", args: "text": "<text>"
 19. Convert Audio to text: "read_audio_from_file", args: "file": "<file>"
-20. Do Nothing: "do_nothing", args: 
+20. Do Nothing: "do_nothing", args:
 21. Task Complete (Shutdown): "task_complete", args: "reason": "<reason>"
 ```
 Each command has a short description (e.g. "Google Search", "Execute Python File", etc.) so ChatGPT knows which command to select given the current context. Further, each command has its own executor in AutoGPT.
@@ -76,7 +76,7 @@ Enter nothing to load defaults, enter nothing when finished.
 Goal 1: Find the top 3 most suitable tennis strings for a hard hitting baseline player who hits with a lot of topspin
 Goal 2: Write the tennis strings to output
 Goal 3: Shut down when you are done
-Goal 4: 
+Goal 4:
 ```
 
 ## How ChatCompletions messages are printed
@@ -120,7 +120,7 @@ Commands:
 2. Browse Website: "browse_website", args: "url": "<url>", "question": "<what_you_want_to_find_on_website>"
 3. Start GPT Agent: "start_agent", args: "name": "<name>", "task": "<short_task_desc>", "prompt": "<prompt>"
 4. Message GPT Agent: "message_agent", args: "key": "<key>", "message": "<message>"
-5. List GPT Agents: "list_agents", args: 
+5. List GPT Agents: "list_agents", args:
 6. Delete GPT Agent: "delete_agent", args: "key": "<key>"
 7. Clone Repository: "clone_repository", args: "repository_url": "<url>", "clone_path": "<directory>"
 8. Write to file: "write_to_file", args: "file": "<file>", "text": "<text>"
@@ -135,7 +135,7 @@ Commands:
 17. Generate Image: "generate_image", args: "prompt": "<prompt>"
 18. Send Tweet: "send_tweet", args: "text": "<text>"
 19. Convert Audio to text: "read_audio_from_file", args: "file": "<file>"
-20. Do Nothing: "do_nothing", args: 
+20. Do Nothing: "do_nothing", args:
 21. Task Complete (Shutdown): "task_complete", args: "reason": "<reason>"
 
 Resources:
@@ -150,8 +150,8 @@ Performance Evaluation:
 3. Reflect on past decisions and strategies to refine your approach.
 4. Every command has a cost, so be smart and efficient. Aim to complete tasks in the least number of steps.
 
-You should only respond in JSON format as described below 
-Response Format: 
+You should only respond in JSON format as described below
+Response Format:
 {
     "thoughts": {
         "text": "thought",
@@ -166,7 +166,7 @@ Response Format:
             "arg name": "value"
         }
     }
-} 
+}
 Ensure the response can be parsed by Python json.loads
 system: The current time and date is Sat Apr 22 01:43:22 2023
 system: This reminds you of these events from your past:
@@ -218,7 +218,7 @@ Commands:
 2. Browse Website: "browse_website", args: "url": "<url>", "question": "<what_you_want_to_find_on_website>"
 3. Start GPT Agent: "start_agent", args: "name": "<name>", "task": "<short_task_desc>", "prompt": "<prompt>"
 4. Message GPT Agent: "message_agent", args: "key": "<key>", "message": "<message>"
-5. List GPT Agents: "list_agents", args: 
+5. List GPT Agents: "list_agents", args:
 6. Delete GPT Agent: "delete_agent", args: "key": "<key>"
 7. Clone Repository: "clone_repository", args: "repository_url": "<url>", "clone_path": "<directory>"
 8. Write to file: "write_to_file", args: "file": "<file>", "text": "<text>"
@@ -233,7 +233,7 @@ Commands:
 17. Generate Image: "generate_image", args: "prompt": "<prompt>"
 18. Send Tweet: "send_tweet", args: "text": "<text>"
 19. Convert Audio to text: "read_audio_from_file", args: "file": "<file>"
-20. Do Nothing: "do_nothing", args: 
+20. Do Nothing: "do_nothing", args:
 21. Task Complete (Shutdown): "task_complete", args: "reason": "<reason>"
 
 Resources:
@@ -248,8 +248,8 @@ Performance Evaluation:
 3. Reflect on past decisions and strategies to refine your approach.
 4. Every command has a cost, so be smart and efficient. Aim to complete tasks in the least number of steps.
 
-You should only respond in JSON format as described below 
-Response Format: 
+You should only respond in JSON format as described below
+Response Format:
 {
     "thoughts": {
         "text": "thought",
@@ -264,7 +264,7 @@ Response Format:
             "arg name": "value"
         }
     }
-} 
+}
 Ensure the response can be parsed by Python json.loads
 system: The current time and date is Sat Apr 22 13:47:07 2023
 system: This reminds you of these events from your past:

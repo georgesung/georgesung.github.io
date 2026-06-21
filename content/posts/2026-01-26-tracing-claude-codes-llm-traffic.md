@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Tracing Claude Code's LLM Traffic: Agentic loop, sub-agents, tool use, prompts"
-date: 2026-01-26 12:00:00 +0000
+date: 2026-01-26
 categories: AI
 ---
 

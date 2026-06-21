@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "OpenAI vs Open Source LLM Comparison for Document Q&A"
-date: 2023-05-06 19:00:00 +0100
+date: 2023-05-06
 categories: AI
 ---
 
@@ -27,7 +27,7 @@ Embedding models:
 
 There are many more exciting open source + commercially viable models to try out, I just haven't yet had time to test them 😄
 
-*Note on terminology*: In this blog post I only refer to generative LLMs as "LLMs", even though large embedding models can also be considered ["Large Language Models"](https://en.wikipedia.org/wiki/Large_language_model). 
+*Note on terminology*: In this blog post I only refer to generative LLMs as "LLMs", even though large embedding models can also be considered ["Large Language Models"](https://en.wikipedia.org/wiki/Large_language_model).
 
 # Basic document Q&A system
 First, below is the basic Wikipedia article Q&A system I built ([code](https://github.com/georgesung/LLM-WikipediaQA)). I used [Wikipedia-API](https://pypi.org/project/Wikipedia-API/) to search/retrieve/beautify Wikipedia articles, [LangChain](https://python.langchain.com/en/latest/index.html) for the Q&A framework, and OpenAI & [HuggingFace](https://huggingface.co/) models for embeddings and LLMs.

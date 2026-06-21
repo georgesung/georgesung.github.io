@@ -1,10 +1,15 @@
 ---
 layout: post
-title: "Fine-tuning OpenLLaMA-7B with QLoRA for instruction following"
-date: 2017-05-17 00:00:00 +0100
+title: "Becoming a Self-Driving Car & Machine Learning Engineer"
+date: 2017-05-17
 categories: Career
 ---
 
 # TLDR
 
-TBD!
+About my 2016 sabbatical to pivot from semiconductor chip design into AI and deep learning. Learned a lot from MOOCs, built interesting projects, and got an MLE job in autonomous driving at BMW.
+
+This was my first public blog post, [originally posted on Medium](https://medium.com/udacity/becoming-a-self-driving-car-machine-learning-engineer-4f9433e49c19). The contents of the blog post are reproduced below.
+
+# Foo
+bar!
