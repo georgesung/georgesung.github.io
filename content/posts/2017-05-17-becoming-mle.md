@@ -34,19 +34,19 @@ With my master plan figured out in late-2015, and with buy-in from friends and f
 # Back to school
 Of course, things don’t always go as planned. Here was the sequence of events that happened in 2016:
 
-**Jan:** Leave job, relax for a few weeks
-**Feb:** Work on MLND, and also Front-End Web Developer Nandodegree (FEND) since I was curious about web development
-**Mar:** One month vacation in Thailand, spend time with parents
-**Apr:** One week vacation in Japan (since it was a connecting flight to Boston), then finish up FEND
-**May:** Finish MLND up until last project, wanted to do something “fancy” for my open-ended capstone. Starting viewing CS231n lectures on Youtube
-**Jun-Jul:** Taking my sweet time viewing CS231n lectures, playing too much video games
-**Aug:** Finished auditing CS231n on Youtube, decided I wanted to do my MLND capstone in deep reinforcement learning, inspired by AlphaGo earlier that year
+- **Jan:** Leave job, relax for a few weeks
+- **Feb:** Work on MLND, and also Front-End Web Developer Nandodegree (FEND) since I was curious about web development
+- **Mar:** One month vacation in Thailand, spend time with parents
+- **Apr:** One week vacation in Japan (since it was a connecting flight to Boston), then finish up FEND
+- **May:** Finish MLND up until last project, wanted to do something “fancy” for my open-ended capstone. Starting viewing CS231n lectures on Youtube
+- **Jun-Jul:** Taking my sweet time viewing CS231n lectures, playing too much video games
+- **Aug:** Finished auditing CS231n on Youtube, decided I wanted to do my MLND capstone in deep reinforcement learning, inspired by AlphaGo earlier that year
 
 In September 2016, something interesting happened: Udacity announced a new 9-month Nanodegree in self-driving cars. To me, the most interesting application of artificial intelligence is in robotics, and self-driving cars are a timely and incredibly useful application of that. I was already behind schedule in my master plan, but I thought this new Self-Driving Car Nanodegree (SDCND) would be worth the extra time investment. Since the first three months of the Nanodegree would be focused on deep learning and computer vision, I felt I could start applying for jobs in that area soon enough. With that, my 2016 timeline continued as follows:
 
-**Sep:** Finished my MLND capstone project. Saw that SDCND was accepting applications, excitedly applied
-**Oct:** Got accepted into SDCND’s October cohort! Started SCDND
-**Nov-Dec:** Working on SDCND
+- **Sep:** Finished my MLND capstone project. Saw that SDCND was accepting applications, excitedly applied
+- **Oct:** Got accepted into SDCND’s October cohort! Started SCDND
+- **Nov-Dec:** Working on SDCND
 
 # Preparing for job search
 By mid-December 2016, I had completed the first 3 projects of the SDCND: basic lane detection, traffic sign classification, and behavioral cloning. Udacity gave me a great starting point for a portfolio, but I wanted to add something extra before I started applying for jobs. I always found object detection demos to be visually cool, so I decided to do a deep-learning-based object detection project (SDCND’s 5th project is actually vehicle detection, but it doesn’t use deep learning techniques). Ultimately, I spent 4 weeks creating a traffic sign detection project, implementing the popular “SSD” algorithm from scratch in TensorFlow.
