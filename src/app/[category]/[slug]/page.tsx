@@ -17,7 +17,7 @@ async function getHighlighter() {
   if (!highlighterInstance) {
     highlighterInstance = await createHighlighter({
       themes: ["github-dark", "github-light"],
-      langs: ["python", "bash", "json", "yaml", "markdown", "plaintext"],
+      langs: ["python", "bash", "json", "yaml", "markdown", "plaintext", "html", "xml"],
     });
   }
   return highlighterInstance;
@@ -63,7 +63,7 @@ export default async function PostPage({ params }: PageProps) {
     renderer: {
       code(token: { text: string; lang?: string; escaped?: boolean }) {
         const language = token.lang || "plaintext";
-        const supportedLangs = ["python", "bash", "json", "yaml", "markdown", "plaintext"];
+        const supportedLangs = ["python", "bash", "json", "yaml", "markdown", "plaintext", "html", "xml"];
         const finalLang = supportedLangs.includes(language) ? language : "plaintext";
 
         return highlighter.codeToHtml(token.text, {
