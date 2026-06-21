@@ -75,6 +75,12 @@ export default async function PostPage({ params }: PageProps) {
           defaultColor: "light",
         });
       },
+      link(token: { href: string; title?: string | null; text: string }) {
+        const isExternal = /^https?:\/\//.test(token.href) || token.href.startsWith("//");
+        const target = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
+        const titleAttr = token.title ? ` title="${token.title}"` : '';
+        return `<a href="${token.href}"${titleAttr}${target}>${token.text}</a>`;
+      },
     },
   });
 
