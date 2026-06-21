@@ -9,10 +9,10 @@ Recently I've found myself completely hooked experimenting with [AutoGPT](https:
 
 *Note*: I analyzed the code from [AutoGPT v0.2.1](https://github.com/Significant-Gravitas/Auto-GPT/releases/tag/v0.2.1), which I downloaded a week ago. The information below reflects AutoGPT 0.2.1. At the time of this writing (2023/04/22), AutoGPT v0.2.2 has already been released. Kudos to the incredible progress the community is making!
 
-## Architecture
+# Architecture
 ![block diagram](/assets/img/auto_gpt.svg)
 
-# Workflow
+## Workflow
 1. User (the human) defines the name of the AI agent, and specifies up to 5 goals, e.g. users of AutoGPT will see the following in their terminal (complete example in the Appendix under "*Example terminal message for initial user input*")
 ```plaintext
 Welcome to Auto-GPT!  Enter the name of your AI and its role below.
@@ -32,7 +32,7 @@ Goal 2: ...
 9. Given the most recent context from the short-term memory (7), query the long-term memory from (8) to get the top-K most relevant pieces of memory (*K=10 for AutoGPT 0.2.1*). The top-K most relevant memories are added to the prompt, under `{relevant memory}` in the diagram. For an example prompt that includes memories, see the Appendix "*Example prompt with memories*". The memories are added under "This reminds you of events from your past".
 10. A new prompt is constructed, with the same instructions from the initial prompt (2), the relevant memories from (9), and an instruction at the end to "GENERATE NEXT COMMAND JSON" (see the Appendix "*Example prompt with memories*"). This new prompt is used to call ChatGPT, and steps (3) through (10) are repeated until the task is complete, i.e. ChatGPT issues the `task_complete` / shut down command.
 
-## Commands
+# Commands
 One fascinating and very powerful aspect of agentic AI is its ability to issue and execute commands. In AutoGPT, the LLM system (ChatGPT) is made aware of the available commands and their functionality via the following text in the prompt:
 ```plaintext
 Commands:
@@ -62,8 +62,8 @@ Each command has a short description (e.g. "Google Search", "Execute Python File
 
 I find this a very powerful concept, since one can extend the suite of commands available, which opens up many possibilities. For example, if we had a command to add products to the shopping cart of an online retailer, we can specify an objective to (1) find tennis strings most suitable for a topspin baseline player, and (2) add that string to the user's shopping cart. One can also extend commands to the physical world, such as smart home controls. Of course, it is very important to prioritize safety, as these LLM-based autonomous agents are still in their early days of development!
 
-## Appendix
-# Example terminal message for initial user input
+# Appendix
+## Example terminal message for initial user input
 ```plaintext
 Welcome to Auto-GPT!  Enter the name of your AI and its role below. Entering nothing will load defaults.
 Name your AI:  For example, 'Entrepreneur-GPT'
@@ -79,7 +79,7 @@ Goal 3: Shut down when you are done
 Goal 4: 
 ```
 
-# How ChatCompletions messages are printed
+## How ChatCompletions messages are printed
 AutoGPT uses OpenAI's [ChatCompletion](https://platform.openai.com/docs/guides/chat/introduction), which expects a list of dicts that represents the chat history. For visual clarify, I have printed out the prompts that go into ChatGPT as a string. For example:
 ```python
 messages = [
@@ -97,7 +97,7 @@ user: bar1
 assistant: bar2
 ```
 
-# Example initial prompt
+## Example initial prompt
 ```plaintext
 system: You are Foo, an AI that recommends tennis equipment for a specific player
 Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies with no legal complications.
@@ -176,7 +176,7 @@ system: This reminds you of these events from your past:
 user: Determine which next command to use, and respond using the format specified above:
 ```
 
-# Example json string returned by ChatGPT
+## Example json string returned by ChatGPT
 ```json
 {
     "thoughts": {
@@ -195,7 +195,7 @@ user: Determine which next command to use, and respond using the format specifie
 }
 ```
 
-# Example prompt with memories
+## Example prompt with memories
 ```plaintext
 system: You are Foo, an AI that recommends tennis equipment for a specific player
 Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies with no legal complications.

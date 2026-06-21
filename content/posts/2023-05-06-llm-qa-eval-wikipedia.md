@@ -5,14 +5,14 @@ date: 2023-05-06 19:00:00 +0100
 categories: AI
 ---
 
-## TLDR
+# TLDR
 For simple Wikipedia article Q&A, I compared OpenAI GPT 3.5, FastChat-T5, FLAN-T5-XXL, and FLAN-T5-XL. GPT 3.5 provided the best answers, but FastChat-T5 was very close in performance (with a basic guardrail). The T5 models I tested are all licensed under Apache 2.0, so they are commercially viable.
 
 For the embedding model, I compared OpenAI text-embedding-ada-002 and the open source INSTRUCTOR-XL models. The INSTRUCTOR-XL model performed better, which is encouraging since INSTRUCTOR-XL is also licensed under Apache 2.0. (*Update*: I just noticed both INSTRUCTOR-XL/LARGE models also perform better on the [MTEB Leaderboard](https://huggingface.co/spaces/mteb/leaderboard))
 
 The code for running these comparisons is available in my [Github repo](https://github.com/georgesung/LLM-WikipediaQA), which includes a link to a Colab notebook and an interactive Gradio app.
 
-## Intro
+# Intro
 The recent developments in open source LLMs to match ChatGPT have been incredibly exciting. There are great places to try out these new LLMs, e.g. on HuggingFace Spaces. Inspired by [The Ultimate Battle of Language Models: Lit-LLaMA vs GPT3.5 vs Bloom vs …](https://lightning.ai/pages/community/community-discussions/the-ultimate-battle-of-language-models-lit-llama-vs-gpt3.5-vs-bloom-vs/), I wanted to try out different LLMs for Q&A on multiple articles with various questions. I was also particularly interested in commercially viable open source LLMs (so not Llama-based, but I'm curious!), since the use cases for these are broader, e.g. document Q&A/chat on internal company documentation. Thus I decided to try out the following open source LLMs and embedding models, using the OpenAI models as a benchmark:
 
 LLMs:
@@ -29,7 +29,7 @@ There are many more exciting open source + commercially viable models to try out
 
 *Note on terminology*: In this blog post I only refer to generative LLMs as "LLMs", even though large embedding models can also be considered ["Large Language Models"](https://en.wikipedia.org/wiki/Large_language_model). 
 
-## Basic document Q&A system
+# Basic document Q&A system
 First, below is the basic Wikipedia article Q&A system I built ([code](https://github.com/georgesung/LLM-WikipediaQA)). I used [Wikipedia-API](https://pypi.org/project/Wikipedia-API/) to search/retrieve/beautify Wikipedia articles, [LangChain](https://python.langchain.com/en/latest/index.html) for the Q&A framework, and OpenAI & [HuggingFace](https://huggingface.co/) models for embeddings and LLMs.
 
 **Search and index Wikipedia article**
@@ -40,13 +40,13 @@ First, below is the basic Wikipedia article Q&A system I built ([code](https://g
 
 ![question and answer](/assets/img/wikiqa_qa.svg)
 
-## Results
+# Results
 In the results below:
 * ❌ = incorrect answer
 * 🤔 = partial credit
 * *(no remarks)* = correct answer
 
-# Embeddings comparison
+## Embeddings comparison
 In these runs, I compared the embeddings models used to create the embeddings/vectors for semantic search & retrieval of relevant context. I fixed the LLM to OpenAI GPT 3.5, since that is the strongest LLM in these comparisons. I only present the results of two embeddings below -- I did try a few other open source embeddings listed [here](https://www.sbert.net/docs/pretrained_models.html), but the results were not good.
 
 Interestingly, the open source INSTRUCTOR-XL embeddings perform better than the closed source OpenAI ada-002 embeddings.
@@ -70,7 +70,7 @@ Stable Diffusion|Who created Stable Diffusion?|Stable Diffusion was created by t
 Stable Diffusion|Describe the model architecture|Stable Diffusion uses a latent diffusion model (LDM) architecture developed by the CompVis group at LMU Munich. It consists of three parts: a variational autoencoder (VAE) encoder, a U-Net block composed of a ResNet backbone, and a VAE decoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, while the U-Net block denoises the output from forward diffusion backwards to obtain a latent representation. Finally, the VAE decoder generates the final image by converting the representation back into pixel space. The model can be flexibly conditioned on a string of text, an image, or another modality, and the encoded conditioning data is exposed to denoising U-Nets via a cross-attention mechanism.|The Stable Diffusion model consists of a latent diffusion model (LDM) that includes a variational autoencoder (VAE), U-Net, and an optional text encoder. The VAE encoder compresses the image from pixel space to a smaller dimensional latent space, while Gaussian noise is iteratively applied to the compressed latent representation during forward diffusion. The U-Net block denoises the output from forward diffusion backwards to obtain a latent representation, and the VAE decoder generates the final image by converting the representation back into pixel space. The denoising step can be conditioned on a string of text, an image, or another modality, and the encoded conditioning data is exposed to denoising U-Nets via a cross-attention mechanism. The model was trained on subsets of captioned images using 256 Nvidia A100 GPUs on Amazon Web Services for a total of 150,000 GPU-hours.|
 Stable Diffusion|Who played in the finals?|There is no information provided about any finals, so it is not possible to answer this question.|There is no information provided about any finals being played, so it is not possible to answer this question.|
 
-# LLMs comparison
+## LLMs comparison
 To compare different LLMs, I fixed the embeddings model to the INSTRUCTOR-XL model, since it performed better in the comparisons above.
 
 **Naive comparison**
@@ -139,7 +139,7 @@ Stable Diffusion|Who played in the finals?|There is no information provided abou
 
 Now the open source models can admit they don't know something, instead of making up a silly answer. All the unanswerable questions correctly resulted in "I don't know" returned from the Q&A system, and all but one answerable question was marked as such. For FLAN-T5-XL, regarding the article "2022 FIFA World Cup" and the question "Which two teams qualified for the knock-out round from Group D?", the question-checking FLAN-T5-XL determined that the question was unanswerable, when in fact it was answerable given the context. Thus, the performance of different LLMs as the question-checker needs to be considered.
 
-## Conclusion
+# Conclusion
 For Q&A over individual Wikipedia articles, the open source FastChat-T5 performs almost as well as GPT 3.5, which is very promising. Granted, this was a relatively simple task, and the questions were pretty straightforward. For more complicated Q&A systems, such as over a collection of documents, I think the challenge is not just in the LLM itself, but the overall system design.
 
 In terms of the embedding models, this is a win for open source, since the INSTRUCTOR-XL embedding model actually performed better than OpenAI's text-embedding-ada-002 model. This is good news, even for those who wish to use GPT 3.5/4. One can embed their potentially large collection documents offline, which (1) saves cost, and (2) allows their vector datastore to be decoupled from any embeddings updates from 3rd parties (e.g. if OpenAI modifies and/or deprecates ada-002, one must re-index their entire collection of documents).
