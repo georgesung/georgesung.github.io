@@ -17,7 +17,8 @@ The past year has been quite a journey for me. A year ago I left my full-time jo
 For those considering a career change, possibly leaving their full-time job, maybe my story can serve as inspiration and provide some useful pointers. For those who are just curious, I think my story would at least be an interesting data point :)
 
 <img src="/assets/img/2017-george-bmw.webp" alt="employee car program" style="width: 80%;" />
-*One of the perks for working at BMW, the “employee car program”*
+
+*One of the perks for working at BMW, the “employee car program"*
 
 # My background
 Prior to my career change, my professional background was in computer chip design. I completed my “traditional” education at the University of Michigan (Go Blue!), graduating with a BS in Computer Engineering and MS in Electrical Engineering back in 2009. After graduation, I found a job at AMD’s Boston office, working on various aspects of computer chip design and verification. The first few years were invigorating: I was learning industry best-practices, contributing to products that millions of people use, and I felt like I was making progress professionally.
