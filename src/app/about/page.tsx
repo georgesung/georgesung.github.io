@@ -23,7 +23,7 @@ export default function AboutPage() {
           </div>
 
           <h1 className="text-2xl font-bold text-foreground mb-1">George Sung</h1>
-          <p className="text-sm text-muted-foreground mb-6">AI, AI, and more AI...</p>
+          <p className="text-sm text-muted-foreground mb-6">AI, AI, and more AI... (mostly)</p>
 
           <div className="flex flex-col gap-2 w-full max-w-[200px]">
             <a
