@@ -23,15 +23,15 @@ I will use a small code repo I wrote a few years ago, where I fine-tuned LLMs wi
 **Test case 1:** Add debug print statements
 
 *“I want you to add some debug prints so I can see the parameters going into the LoraConfig when I start training”*
-![test case 1](/assets/img/tracing-cc-1.jpg)
+![test case 1](/assets/img/tracing-claude-codes-llm-traffic/tracing-cc-1.jpg)
 
 **Test case 2:** Explain codebase
 
 *“Tell me about this codebase”*
-![test case 2](/assets/img/tracing-cc-2.jpg)
+![test case 2](/assets/img/tracing-claude-codes-llm-traffic/tracing-cc-2.jpg)
 
 # Method
-![architecture](/assets/img/tracing-cc-arch.jpg)
+![architecture](/assets/img/tracing-claude-codes-llm-traffic/tracing-cc-arch.jpg)
 
 - **Connect Claude Code to Ollama:** Per the instructions from the [Ollama blog post](https://ollama.com/blog/claude), I updated a couple of environment variables so Claude Code now makes its LLM calls through Ollama. For this experiment, I used [Claude Code version 2.1.19](https://github.com/anthropics/claude-code/releases/tag/v2.1.19)
 - **Log/print the LLM requests/responses:** I forked [Ollama v0.14.2](https://github.com/ollama/ollama/releases/tag/v0.14.2) and added some print statements to log the LLM requests and responses coming from/to Claude Code: https://github.com/georgesung/ollama-v0.14.2-georgesung — then I [built Ollama from source](https://github.com/georgesung/ollama-v0.14.2-georgesung/blob/main/docs/development.md).
@@ -1172,7 +1172,7 @@ The main agent receives the result of the sub-agent via a user message in the LL
 
 From the response, stop_reason = end_turn, so the main agent’s work is done! The user’s request is fulfilled. The final response text gets shown to the user at the end.
 
-![done](/assets/img/tracing-cc-3.jpg)
+![done](/assets/img/tracing-claude-codes-llm-traffic/tracing-cc-3.jpg)
 
 As before, Claude Code will try to generate suggestions for the user’s next prompt via the same request as in the previous example:
 ```json

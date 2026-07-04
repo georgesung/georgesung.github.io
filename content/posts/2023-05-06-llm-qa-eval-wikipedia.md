@@ -34,11 +34,11 @@ First, below is the basic Wikipedia article Q&A system I built ([code](https://g
 
 **Search and index Wikipedia article**
 
-![search and index](/assets/img/wikiqa_search.svg)
+![search and index](/assets/img/llm-qa-eval-wikipedia/wikiqa_search.svg)
 
 **Q&A on article**
 
-![question and answer](/assets/img/wikiqa_qa.svg)
+![question and answer](/assets/img/llm-qa-eval-wikipedia/wikiqa_qa.svg)
 
 # Results
 In the results below:
@@ -114,7 +114,7 @@ The question-checking LLM should respond with "yes" or "no". If we don't get a "
 
 In my [code](https://github.com/georgesung/LLM-WikipediaQA/blob/cd6b693959709d2fc6108a000592a9c690bfcabc/WikipediaQA.py#L144), the question-checking and question-answering LLMs use the same LLM instance, just different prompts. Thus, for an answerable question, the inference latency will involve two calls to the LLM. If latency is an issue, one can load two LLM instances (they don't even need to be the same type of LLM), and run both question-checking and question-answering LLMs in parallel. Visually, it may look something like this:
 
-![question and answer](/assets/img/wikiqa_guardrail.svg)
+![question and answer](/assets/img/llm-qa-eval-wikipedia/wikiqa_guardrail.svg)
 
 The results are much better:
 

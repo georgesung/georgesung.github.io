@@ -10,7 +10,7 @@ Recently I've found myself completely hooked experimenting with [AutoGPT](https:
 *Note*: I analyzed the code from [AutoGPT v0.2.1](https://github.com/Significant-Gravitas/Auto-GPT/releases/tag/v0.2.1), which I downloaded a week ago. The information below reflects AutoGPT 0.2.1. At the time of this writing (2023/04/22), AutoGPT v0.2.2 has already been released. Kudos to the incredible progress the community is making!
 
 # Architecture
-![block diagram](/assets/img/auto_gpt.svg)
+![block diagram](/assets/img/autogpt-arch/auto_gpt.svg)
 
 ## Workflow
 1. User (the human) defines the name of the AI agent, and specifies up to 5 goals, e.g. users of AutoGPT will see the following in their terminal (complete example in the Appendix under "*Example terminal message for initial user input*")
