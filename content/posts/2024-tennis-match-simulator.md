@@ -17,7 +17,7 @@ Ever wondered:
 - What percentage of points do I need to win to get just one game off a much better player?
 - If I usually win/lose 10-5 when playing practice tiebreaks with my friend, what is my expected match score in a full match?
 
-I decided to build a tennis match simulator to find out!
+Tennis is my main hobby, and I've certainly wondered about this. So I decided to build a tennis match simulator to find out!
 
 [georgesung.com/tennis-match-simulator](https://www.georgesung.com/tennis-match-simulator/)
 
@@ -53,29 +53,28 @@ From this chart, we can observe interesting scoring effects:
 - **Best of 5 sets (red dashed line)** makes the S-curve even steeper, further rewarding the player with the statistical point edge.
 - **Fast 4 (yellow dashed line)**, **match tiebreak to 10 (purple dotted line)**, and **no-ad scoring (green dash-dot line)** reduce the number of points/games played, which introduces more variance and flattens the S-curve, giving the underdog a better chance.
 
-Here is raw data used to plot the S-curves above:
-(TODO: make this a nicer markdown format)
-``csv
-point_win_prob,default_match_win_prob,best_of_5_match_win_prob,no_ad_match_win_prob,match_tiebreak_match_win_prob,fast_four_match_win_prob,num_matches
-0.40,0.0041,0.0005,0.0091,0.0131,0.0171,100000
-0.41,0.0081,0.0015,0.0172,0.0228,0.0274,100000
-0.42,0.0167,0.0037,0.0293,0.0375,0.0443,100000
-0.43,0.0308,0.0092,0.0490,0.0585,0.0676,100000
-0.44,0.0541,0.0225,0.0782,0.0912,0.1001,100000
-0.45,0.0898,0.0465,0.1188,0.1313,0.1428,100000
-0.46,0.1396,0.0885,0.1719,0.1848,0.1968,100000
-0.47,0.2109,0.1562,0.2389,0.2504,0.2631,100000
-0.48,0.2936,0.2515,0.3167,0.3266,0.3337,100000
-0.49,0.3947,0.3683,0.4053,0.4111,0.4156,100000
-0.50,0.4993,0.4996,0.5000,0.4998,0.5011,100000
-0.51,0.6056,0.6325,0.5946,0.5885,0.5832,100000
-0.52,0.7062,0.7514,0.6822,0.6741,0.6655,100000
-0.53,0.7913,0.8451,0.7626,0.7499,0.7394,100000
-0.54,0.8590,0.9091,0.8299,0.8164,0.8015,100000
-0.55,0.9094,0.9537,0.8828,0.8686,0.8575,100000
-0.56,0.9453,0.9776,0.9221,0.9102,0.8994,100000
-0.57,0.9691,0.9901,0.9508,0.9407,0.9329,100000
-0.58,0.9842,0.9962,0.9705,0.9622,0.9555,100000
-0.59,0.9910,0.9986,0.9830,0.9779,0.9716,100000
-0.60,0.9964,0.9996,0.9904,0.9862,0.9836,100000
-```
+Here is the raw data (based on 100,000 simulated matches per scenario) used to plot the S-curves above. First column is point-win probability, and the remaining columns to the right are match win probabilities under different scoring rules.
+
+| Point Win Prob. | Default | Best of 5 | No-Ad | Match Tiebreak | Fast 4 |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 40% | 0.41% | 0.05% | 0.91% | 1.31% | 1.71% |
+| 41% | 0.81% | 0.15% | 1.72% | 2.28% | 2.74% |
+| 42% | 1.67% | 0.37% | 2.93% | 3.75% | 4.43% |
+| 43% | 3.08% | 0.92% | 4.90% | 5.85% | 6.76% |
+| 44% | 5.41% | 2.25% | 7.82% | 9.12% | 10.01% |
+| 45% | 8.98% | 4.65% | 11.88% | 13.13% | 14.28% |
+| 46% | 13.96% | 8.85% | 17.19% | 18.48% | 19.68% |
+| 47% | 21.09% | 15.62% | 23.89% | 25.04% | 26.31% |
+| 48% | 29.36% | 25.15% | 31.67% | 32.66% | 33.37% |
+| 49% | 39.47% | 36.83% | 40.53% | 41.11% | 41.56% |
+| 50% | 49.93% | 49.96% | 50.00% | 49.98% | 50.11% |
+| 51% | 60.56% | 63.25% | 59.46% | 58.85% | 58.32% |
+| 52% | 70.62% | 75.14% | 68.22% | 67.41% | 66.55% |
+| 53% | 79.13% | 84.51% | 76.26% | 74.99% | 73.94% |
+| 54% | 85.90% | 90.91% | 82.99% | 81.64% | 80.15% |
+| 55% | 90.94% | 95.37% | 88.28% | 86.86% | 85.75% |
+| 56% | 94.53% | 97.76% | 92.21% | 91.02% | 89.94% |
+| 57% | 96.91% | 99.01% | 95.08% | 94.07% | 93.29% |
+| 58% | 98.42% | 99.62% | 97.05% | 96.22% | 95.55% |
+| 59% | 99.10% | 99.86% | 98.30% | 97.79% | 97.16% |
+| 60% | 99.64% | 99.96% | 99.04% | 98.62% | 98.36% |
