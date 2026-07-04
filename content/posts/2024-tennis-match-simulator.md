@@ -25,7 +25,7 @@ Tennis is my main hobby, and I've certainly wondered about this. So I decided to
 
 This is a simple client side web app, and those curious can check out the code [here](https://github.com/georgesung/tennis-match-simulator).
 
-# Point win probability vs. match win probability, and S-curves
+# Results
 
 Under standard tennis scoring rules (best of 3 sets, standard ad scoring, full 3rd set), a slight edge in point-win probability translates into a significantly larger edge in match-win probability:
 - If a player has a 50% chance of winning any individual point, they have exactly a 50% chance of winning the match.
