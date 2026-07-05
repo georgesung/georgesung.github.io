@@ -23,7 +23,7 @@ Tennis is my main hobby, and I've certainly wondered about this. So I decided to
 
 <img src="/assets/img/tennis-match-simulator/demo.png" alt="app screenshot" style="width: 80%;" />
 
-This is a simple client side web app, and those curious can check out the code [here](https://github.com/georgesung/tennis-match-simulator).
+This is a simple client-side web app, and those curious can check out the code [here](https://github.com/georgesung/tennis-match-simulator).
 
 # Results
 
@@ -55,7 +55,7 @@ From this chart, we can observe interesting scoring effects:
 
 Here is the raw data (based on 100,000 simulated matches per scenario) used to plot the S-curves above. First column is point-win probability, and the remaining columns to the right are match win probabilities under different scoring rules.
 
-| Point Win Prob. | Default | Best of 5 | No-Ad | Match Tiebreak | Fast 4 |
+| Point Win Prob. | Standard | Best of 5 | No-Ad | Match Tiebreak | Fast 4 |
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | 40% | 0.41% | 0.05% | 0.91% | 1.31% | 1.71% |
 | 41% | 0.81% | 0.15% | 1.72% | 2.28% | 2.74% |
@@ -81,29 +81,29 @@ Here is the raw data (based on 100,000 simulated matches per scenario) used to p
 
 # How the simulator works
 
-The simulator is a client-side NextJS web app that runs entirely in your browser. Rather than calculating complex exact probability formulas, the simulator uses a Monte-Carlo approach and runs thousands of matches (default 100,000) and aggregates the outcomes.
+The simulator is a client-side NextJS web app that runs in your browser. Rather than calculating complex exact probability formulas, we use a Monte-Carlo approach by simulating thousands of matches (default 100,000) and aggregating the outcomes.
 
 Here is the hierarchical flow of how a match is simulated:
 
-### 1. Simulating a Point
+### 1. Simulating a point
 To decide who wins a point, the simulator generates a random number between 0 and 1 using `Math.random()` and compares it to Player A's point-win probability:
 * If the random number is less than Player A's probability, Player A wins the point.
-* Otherwise, Player B wins the point.
+* Else, Player B wins the point.
 * *(Note: If the "Serve/return win %" setting is enabled, the simulator dynamically adjusts the target threshold depending on who is serving during that game).*
 
-### 2. Simulating a Game
+### 2. Simulating a game
 A game is simulated by calling the point simulator in a loop:
 * Standard rules: The first player to win at least 4 points with a lead of 2 or more wins the game.
-* **No-Ad Scoring:** If the score reaches 3-3 (Deuce), the simulator plays a single deciding point to determine the winner of the game.
+* No-ad scoring: If the score reaches 3-3 (Deuce), the simulator plays a single deciding point to determine the winner of the game.
 
-### 3. Simulating a Set
+### 3. Simulating a set
 A set is simulated by alternating serves and playing games:
 * Standard rules: The first player to reach 6 games with a 2-game lead wins the set. If the score reaches 6-6, a 7-point tiebreak is played.
-* **Fast 4 Format:** The target is set to 4 games. If the score reaches 3-3, a 7-point tiebreak is played. The 2-game lead rule is ignored.
+* Fast 4 format: The target is set to 4 games. If the score reaches 3-3, a 7-point tiebreak is played. The 2-game lead rule is ignored.
 
-### 4. Simulating a Match
+### 4. Simulating a match
 A match is played until one player wins the required number of sets (2 sets for best-of-3, 3 sets for best-of-5):
 * Standard rules: The server alternates sequentially. The simulator handles rule-compliant serve rotations (who serves first in the next set based on whether the total games of the previous set were odd or even).
-* **Match Tiebreak (10 points):** If the sets are tied (e.g., 1-1 in a best-of-3 match), a single 10-point tiebreak is played in lieu of a full final set to decide the match.
+* Match tiebreak (10 points): If the sets are tied (e.g., 1-1 in a best-of-3 match), a single 10-point tiebreak is played in lieu of a full final set to decide the match.
 
-When you click "Simulate Matches," the simulator runs this complete logic loop N times (default N=100,000 times), tracking the match winners, overall games won, and set scores to generate the final statistics.
+When you click "Simulate Matches," the simulator runs the above loop N times (default N=100,000 times), tracking the match winners, overall games won, and set scores to generate the final statistics.
