@@ -93,17 +93,17 @@ To decide who wins a point, the simulator generates a random number between 0 an
 
 ### 2. Simulating a game
 A game is simulated by calling the point simulator in a loop:
-* Standard rules: The first player to win at least 4 points with a lead of 2 or more wins the game.
-* No-ad scoring: If the score reaches 3-3 (Deuce), the simulator plays a single deciding point to determine the winner of the game.
+* *Standard rules:* The first player to win at least 4 points with a lead of 2 or more wins the game.
+* *No-ad scoring:* If the score reaches 3-3 (Deuce), the simulator plays a single deciding point to determine the winner of the game.
 
 ### 3. Simulating a set
 A set is simulated by alternating serves and playing games:
-* Standard rules: The first player to reach 6 games with a 2-game lead wins the set. If the score reaches 6-6, a 7-point tiebreak is played.
-* Fast 4 format: The target is set to 4 games. If the score reaches 3-3, a 7-point tiebreak is played. The 2-game lead rule is ignored.
+* *Standard rules:* The first player to reach 6 games with a 2-game lead wins the set. If the score reaches 6-6, a 7-point tiebreak is played.
+* *Fast 4 format:* The target is set to 4 games. If the score reaches 3-3, a 7-point tiebreak is played. The 2-game lead rule is ignored.
 
 ### 4. Simulating a match
 A match is played until one player wins the required number of sets (2 sets for best-of-3, 3 sets for best-of-5):
-* Standard rules: The server alternates sequentially. The simulator handles rule-compliant serve rotations (who serves first in the next set based on whether the total games of the previous set were odd or even).
-* Match tiebreak (10 points): If the sets are tied (e.g., 1-1 in a best-of-3 match), a single 10-point tiebreak is played in lieu of a full final set to decide the match.
+* *Standard rules:* The server alternates sequentially. The simulator handles rule-compliant serve rotations (who serves first in the next set based on whether the total games of the previous set were odd or even).
+* *Match tiebreak (10 points):* If the sets are tied (e.g., 1-1 in a best-of-3 match), a single 10-point tiebreak is played in lieu of a full final set to decide the match.
 
 When you click "Simulate Matches," the simulator runs the above loop N times (default N=100,000 times), tracking the match winners, overall games won, and set scores to generate the final statistics.
