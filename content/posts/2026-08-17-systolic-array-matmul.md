@@ -6,7 +6,8 @@ categories: AI-hardware
 ---
 
 # TLDR
-tbd
+
+I discuss why matmuls are important for LLMs and where they occur. I also show how systolic arrays work for computing matmuls, via an interactive simulator built in Rust and wrapped in a web app.
 
 # Intro
 
@@ -33,7 +34,7 @@ So, if we take all this time loading the `W_Q` weight matrix from memory into th
 
 So where do we get all those `x` vectors? Looking at the Q projections for LLM inference, during the *[prefill](https://redis.io/blog/prefill-vs-decode/)* phase, we want to compute the `q` vector for all tokens in the sequence, so we can concatenate all those input `x` vectors across the sequence, and have an input matrix `X` of size `[sequence_length, hidden_dim]`. Further, if we have a batch size greater than 1, our input matrix `X` can have dimensions `[batch_size * sequence_length, hidden_dim]`, allowing even more data re-use and improving our arithmetic intensity, i.e keeping the systolic array very busy.
 
-*Side note:* This is one of the reasons why LLM inference prefill tends to be *[compute bound](https://jax-ml.github.io/scaling-book/roofline/)*. In the memory bound decode phase, we only need to do the Q, K, V projection for one token -- the latest/current token -- so `sequence_length = 1`. Thus we spend all this time loading the Q, K, V matrix weights from memory into our compute units, just to perform a vector-matrix multiply. With [continuous batching](), we can get a batch of input vectors such that we can build an input matrix `X` of size `[batch_size, hidden_dim]`, so we can make a judgement call here: If `batch_size > threshold`, then push the Q, K, V projection computation to systolic arrays / Tensor Cores. Else, the Q, K, V projections can be run on standard SIMT CUDA cores / CPU vector compute.
+*Side note:* This is one of the reasons why LLM inference prefill tends to be *[compute bound](https://jax-ml.github.io/scaling-book/roofline/)*. In the memory bound decode phase, we only need to do the Q, K, V projection for one token -- the latest/current token -- so `sequence_length = 1`. Thus we spend all this time loading the Q, K, V matrix weights from memory into our compute units, just to perform a vector-matrix multiply. With [continuous batching](https://www.anyscale.com/blog/continuous-batching-llm-inference), we can get a batch of input vectors such that we can build an input matrix `X` of size `[batch_size, hidden_dim]`, so we can make a judgement call here: If `batch_size > threshold`, then push the Q, K, V projection computation to systolic arrays / Tensor Cores. Else, the Q, K, V projections can be run on standard SIMT CUDA cores / CPU vector compute.
 
 ## Attention computation: Q * K_T, score * V
 
@@ -119,4 +120,4 @@ A weight-stationary 2D grid multiplying two matrices. See how the input matrix s
 
 <img src="/assets/img/systolic-array-matmul/batched-matmul-animation.gif" alt="matmul" style="width: 80%;" />
 
-Same as above, but this time we see a batched matmul in action. Notice that the PE utiliziation is maintained at 100% for much longer.
+Same as above, but this time we see a batched matmul in action. Notice that the PE utilization is maintained at 100% for much longer.
