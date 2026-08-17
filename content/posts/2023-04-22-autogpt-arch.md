@@ -5,6 +5,10 @@ date: 2023-04-22
 categories: AI
 ---
 
+# TLDR
+Digging into the architecture and internals of AutoGPT, one of the first AI agent proof-of-concepts from early 2023 -- not long after ChatGPT first came out.
+
+# Intro
 Recently I've found myself completely hooked experimenting with [AutoGPT](https://github.com/Significant-Gravitas/Auto-GPT), as have many others. Using AutoGPT as a black box, I started getting curious about how it works under the hood. Thankfully the code is open source, so I decided to take a look. The following are my notes on the architecture of AutoGPT. Hopefully this helps those who are curious about how AutoGPT works. Also, AutoGPT can serve as a reference design for those who are building their own agentic AI systems.
 
 *Note*: I analyzed the code from [AutoGPT v0.2.1](https://github.com/Significant-Gravitas/Auto-GPT/releases/tag/v0.2.1), which I downloaded a week ago. The information below reflects AutoGPT 0.2.1. At the time of this writing (2023/04/22), AutoGPT v0.2.2 has already been released. Kudos to the incredible progress the community is making!
