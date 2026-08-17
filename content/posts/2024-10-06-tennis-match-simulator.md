@@ -7,7 +7,7 @@ categories: Tennis
 
 # TLDR
 
-I built tennis match simulator to answer questions like "If I win just 53% of points, how likely am I to win the match?" (spoiler: 79% chance). Ran Monte-Carlo simulations and plotted some S-curves to visualize this, plus looked at the effects of different match rules like best of 5 sets, fast 4, etc.
+I built a tennis match simulator to answer questions like "If I win just 53% of points, how likely am I to win the match?" (spoiler: 79% chance). Ran Monte-Carlo simulations and plotted S-curves to visualize this, plus analyzed the effects of different match rules like best of 5 sets, fast 4, etc.
 
 The simulator is live on [georgesung.com/tennis-match-simulator](https://www.georgesung.com/tennis-match-simulator/).
 
