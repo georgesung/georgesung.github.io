@@ -7,7 +7,9 @@ categories: AI-hardware
 
 # TLDR
 
-I discuss why matmuls are important for LLMs and where they occur. I also show how systolic arrays work for computing matmuls, via an interactive simulator built in Rust and wrapped in a web app.
+I discuss why matmuls are important for LLMs and where they occur. I also show how systolic arrays work for computing matmuls, via an interactive simulator built in Rust and wrapped in a web app. The systolic array simulator is live and deployed at:
+
+[https://systolic-array-simulator.georgesung.com/](https://systolic-array-simulator.georgesung.com/)
 
 # Intro
 
