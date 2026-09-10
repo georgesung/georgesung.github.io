@@ -6,6 +6,7 @@ import { createSlugger, extractToc } from "@/lib/headings";
 import { TableOfContents } from "@/components/TableOfContents";
 import { TableOfContentsDetails } from "@/components/TableOfContentsDetails";
 import { cn } from "@/lib/utils";
+import { BackToTop } from "@/components/BackToTop";
 import Link from "next/link";
 
 interface PageProps {
@@ -185,6 +186,8 @@ export default async function PostPage({ params }: PageProps) {
           <TableOfContents toc={toc} />
         </div>
       )}
+
+      <BackToTop />
     </div>
   );
 }

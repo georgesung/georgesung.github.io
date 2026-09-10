@@ -55,6 +55,7 @@ rm -rf .next/dev .next/cache
 | `src/app/[category]/[slug]/page.tsx` | The only post route. Renders markdown via `marked` + `shiki`, pre-rendered by `generateStaticParams()`. |
 | `src/lib/headings.ts` | Heading slugs (anchor ids) and table-of-contents extraction. |
 | `src/components/TableOfContents*.tsx` | The post table of contents — sticky rail on wide screens, `<details>` block on narrow ones. |
+| `src/components/BackToTop.tsx` | Floating back-to-top button. Posts only; appears after one screenful of scrolling. |
 | `src/app/page.tsx` | Homepage — hero + reverse-chronological post list. |
 | `src/app/about/page.tsx` | About page. Bio and job history are hardcoded JSX, not markdown. |
 | `src/app/sitemap.ts` | Generates `sitemap.xml`. Add new static routes here. |
@@ -157,6 +158,11 @@ lined up with the post title, via this in `globals.css`:
 
 75rem is not a round design number: it's the narrowest viewport that fits the 72rem frame with a
 little side margin. Widening the rail or the article means recomputing both it and the 72rem.
+
+The rail's `max-h-[calc(100vh-11rem)]` is likewise load-bearing rather than arbitrary. The rail and
+the floating back-to-top button share the same corner of the screen, and on a short viewport a long
+list would grow down into the button. The cap makes the rail scroll internally instead. Raising it
+brings the two back into contact.
 
 **Post markdown is rendered with `dangerouslySetInnerHTML`.** That's fine for first-party content,
 but it means any HTML in a post is live. Don't pipe untrusted content through this path.

@@ -67,7 +67,9 @@ export function TableOfContents({ toc }: { toc: TocEntry[] }) {
   return (
     <nav
       aria-label="Table of contents"
-      className="sticky top-20 max-h-[calc(100vh-7rem)] overflow-y-auto"
+      // The bottom cap keeps the rail clear of the floating back-to-top
+      // button on short viewports, where a long list would otherwise reach it.
+      className="sticky top-20 max-h-[calc(100vh-11rem)] overflow-y-auto"
     >
       <p className="mb-3 text-sm font-semibold text-foreground">On this page</p>
       <ul className="border-l border-border">
