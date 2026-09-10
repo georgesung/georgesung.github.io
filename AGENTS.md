@@ -26,6 +26,15 @@ post, and fails on broken markdown or bad config. Run it before claiming a chang
 
 `npm run start` is in package.json but is not meaningful for a static export — serve `out/` instead.
 
+`.claude/launch.json` defines a `dev` configuration, so an agent with browser tooling can start the
+dev server by name and drive a real browser against it (screenshots, clicking, reading the console
+and network, running JS in the page). Prefer that over launching `npm run dev` as a bare background
+process — it reuses an already-running server and can be stopped cleanly.
+
+Caveat: the dev server is **not** a faithful stand-in for production here. This site is a static
+export served by GitHub Pages, and URL-shape bugs (see below) do not reproduce under `next dev`.
+For anything routing-related, build and inspect `out/`.
+
 ## Layout
 
 | Path | What |
