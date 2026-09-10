@@ -173,13 +173,32 @@ URLs first.
 Push to `master` → `.github/workflows/nextjs.yml` builds and publishes to GitHub Pages. Typical run
 is ~1 minute (build is ~8s; the rest is setup and the Pages deploy step).
 
-**Known unresolved issue:** the workflow passes `static_site_generator: next` to
-`actions/configure-pages`, which injects its own Next.js config. This appears to override
-`next.config.ts` — a build that produces correct trailing-slash output locally produced flat
-`about.html`-style output in CI. If the live site is serving `/about.html` rather than
-`/about/index.html`, this is why. Suspected fix is dropping `static_site_generator: next` (this is a
-user site at a domain root, so the `basePath` injection it provides is unnecessary), but that has
-not been verified yet.
+**Never add `static_site_generator: next` to the `configure-pages` step.** It was there originally,
+and it silently broke every trailing-slash URL on the live site while local builds looked perfect.
+
+How it breaks, since the step reads like it should be harmless:
+
+1. `configure-pages` only looks for `next.config.{js,cjs,mjs}` — no `.ts`, in either v5 or v6. So it
+   does not find `next.config.ts`.
+2. Not finding one, it **creates** `next.config.js` from a blank template and injects `output`,
+   `basePath` and `images.unoptimized` into that.
+3. Next resolves its config through `CONFIG_FILES = ['next.config.js', 'next.config.mjs',
+   'next.config.ts']` and takes the first that exists — so the generated file wins and
+   `next.config.ts` is never read.
+4. The generated file has no `trailingSlash`, so CI emits `about.html` where a local build emits
+   `about/index.html`. It cannot reproduce locally, which is what made it hard to find.
+
+The injection was never buying anything: `basePath` is empty for a user site at a domain root, and
+`next.config.ts` already sets `output` and `images.unoptimized`.
+
+To see the failure deliberately, put this beside `next.config.ts`, run `npm run build`, and watch
+`out/` go flat — then delete it:
+
+```js
+// Default Pages configuration for Next
+const nextConfig = { output: 'export', basePath: '', images: { unoptimized: true } }
+module.exports = nextConfig
+```
 
 To check what's actually live:
 
