@@ -45,3 +45,6 @@ next-env.d.ts
 
 # My hidden stash so git doesn't go crazy
 gsung_stash
+
+# Claude Code local settings (per-machine permissions; launch.json IS committed)
+.claude/settings.local.json
