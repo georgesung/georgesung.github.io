@@ -26,7 +26,7 @@ Enter up to 5 goals for your AI:
 Goal 1: ...
 Goal 2: ...
 ```
-2. Based on the user's settings, the initial prompt is generated and sent to the ChatGPT API. The prompt contains the user's setttings, and overall instructions for ChatGPT. Overall instructions include all available commands, instructions to output results in json, and more. For an example of an initial prompt, see the Appendix "*Example initial prompt*".
+2. Based on the user's settings, the initial prompt is generated and sent to the ChatGPT API. The prompt contains the user's settings, and overall instructions for ChatGPT. Overall instructions include all available commands, instructions to output results in json, and more. For an example of an initial prompt, see the Appendix "*Example initial prompt*".
 3. ChatGPT returns a json string (ideally), which includes its thoughts, reasoning, plan, and criticism. The json also includes the next command to execute and its arguments. For an example of a json string returned by ChatGPT, see the Appendix "*Example json string returned by ChatGPT*".
 4. The command is extracted and parsed from ChatGPT's response. If the shut down / `task_complete` command was issued, then the system shuts down. Else, the appropriate command executor executes the command with the given arguments.
 5. The executed command returns a string value. For example, the Google search command would return the search results, the `browse_website` command would return a summary of the scraped website contents, the `write_to_file` would return the status of writing to a file, etc.
