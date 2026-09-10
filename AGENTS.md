@@ -133,10 +133,28 @@ npm run build && node -e "const h=require('fs').readFileSync(process.argv[1],'ut
 
 An empty array means every table-of-contents link resolves.
 
-**`toc:` is a custom breakpoint**, defined in `globals.css` as `--breakpoint-toc: 90rem`. It is not
-a round design number: it's the narrowest viewport where the gutter beside the 56rem article column
-still fits the 14rem rail plus its 2rem gap. Widening the rail or the article means recomputing it,
-or the rail runs off the right edge.
+**The table-of-contents rail widens the whole page frame, and three numbers have to agree.** When a
+post shows its rail, its container goes from 56rem to **72rem** (56 article + 2 gap + 14 rail), which
+shifts the article column left of centre. The header and footer widen to match so the logo stays
+lined up with the post title, via this in `globals.css`:
+
+```css
+@media (min-width: 75rem) {
+  body:has([data-post-toc]) .site-frame { max-width: 72rem; }
+}
+```
+
+- `data-post-toc` is on the rail wrapper in the post page. `:has()` is what keeps the homepage and
+  About — which have no rail — at the original centred 56rem.
+- `.site-frame` is on the header and footer inner containers in `layout.tsx`. It is plain unlayered
+  CSS, so it beats the `max-w-4xl` utility regardless of source order. Removing that class from
+  either one silently misaligns the header against posts.
+- The media query duplicates `--breakpoint-toc` (75rem) because CSS can't read a theme variable
+  inside `@media`. **Change one and you must change the other**, or the header widens at a different
+  width than the rail appears.
+
+75rem is not a round design number: it's the narrowest viewport that fits the 72rem frame with a
+little side margin. Widening the rail or the article means recomputing both it and the 72rem.
 
 **Post markdown is rendered with `dangerouslySetInnerHTML`.** That's fine for first-party content,
 but it means any HTML in a post is live. Don't pipe untrusted content through this path.

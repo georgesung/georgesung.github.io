@@ -68,7 +68,7 @@ export default function RootLayout({
           `}
         </Script>
         <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm">
-          <div className="container max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="site-frame container max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
             <Link 
               href="/" 
               className="text-lg font-bold tracking-tight hover:opacity-85 transition-opacity"
@@ -105,7 +105,7 @@ export default function RootLayout({
         <main className="flex-1 flex flex-col">{children}</main>
 
         <footer className="border-t border-border bg-muted/30">
-          <div className="container max-w-4xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div className="site-frame container max-w-4xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <p>© {new Date().getFullYear()} Jou-ching (George) Sung. All rights reserved.</p>
           </div>
         </footer>

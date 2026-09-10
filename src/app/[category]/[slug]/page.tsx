@@ -5,6 +5,7 @@ import { createHighlighter } from "shiki";
 import { createSlugger, extractToc } from "@/lib/headings";
 import { TableOfContents } from "@/components/TableOfContents";
 import { TableOfContentsDetails } from "@/components/TableOfContentsDetails";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 interface PageProps {
@@ -102,8 +103,15 @@ export default async function PostPage({ params }: PageProps) {
   const showToc = toc.length >= 3;
 
   return (
-    <div className="container relative max-w-4xl mx-auto">
-      <article className="px-4 py-12 md:py-16">
+    <div
+      className={cn(
+        "mx-auto flex w-full max-w-4xl",
+        // Only widen when there is actually a rail to make room for, so posts
+        // without one stay centered like the rest of the site.
+        showToc && "toc:max-w-[72rem]",
+      )}
+    >
+      <article className="min-w-0 flex-1 px-4 py-12 md:py-16">
         <div className="mb-8">
           <Link 
             href="/" 
@@ -141,7 +149,12 @@ export default async function PostPage({ params }: PageProps) {
       </article>
 
       {showToc && (
-        <div className="absolute inset-y-0 left-full ml-8 hidden w-56 py-12 toc:block md:py-16">
+        // data-post-toc is the hook the header/footer widening in globals.css
+        // keys off; see the .site-frame rule there.
+        <div
+          data-post-toc
+          className="ml-8 hidden w-56 shrink-0 py-12 toc:block md:py-16"
+        >
           <TableOfContents toc={toc} />
         </div>
       )}

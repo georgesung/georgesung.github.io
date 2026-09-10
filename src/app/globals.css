@@ -5,9 +5,25 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* Width at which the gutter beside the 56rem article column is wide enough
-     to hold the post table-of-contents rail. */
-  --breakpoint-toc: 90rem;
+  /* Width at which a post is wide enough to show its table-of-contents rail:
+     56rem of article + 2rem gap + 14rem rail, plus a little side margin.
+     Kept in sync by hand with the .site-frame media query below and with
+     toc:max-w-[72rem] on the post container. */
+  --breakpoint-toc: 75rem;
+}
+
+/*
+ * A post showing its table-of-contents rail is 72rem wide rather than 56rem,
+ * which shifts the article column left of where it sits elsewhere on the site.
+ * Widen the header and footer to match so the logo stays lined up with the post
+ * title. :has() scopes this to pages that actually render a rail — the homepage
+ * and About keep the narrower centered layout — and the media query is what
+ * distinguishes a rail that is displayed from one that is only in the DOM.
+ */
+@media (min-width: 75rem) {
+  body:has([data-post-toc]) .site-frame {
+    max-width: 72rem;
+  }
 }
 
 @theme inline {
