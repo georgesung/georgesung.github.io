@@ -4,6 +4,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  /* Width at which the gutter beside the 56rem article column is wide enough
+     to hold the post table-of-contents rail. */
+  --breakpoint-toc: 90rem;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

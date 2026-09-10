@@ -35,6 +35,15 @@ Caveat: the dev server is **not** a faithful stand-in for production here. This 
 export served by GitHub Pages, and URL-shape bugs (see below) do not reproduce under `next dev`.
 For anything routing-related, build and inspect `out/`.
 
+Second caveat: Turbopack caches compiled CSS across dev restarts, and a **new** `@theme` variable in
+`globals.css` (a custom breakpoint, say) may not show up even after restarting the server — the
+class silently never gets generated. `npm run build` is unaffected, so if a utility works in the
+production build but not in dev, clear the cache:
+
+```bash
+rm -rf .next/dev .next/cache
+```
+
 ## Layout
 
 | Path | What |
@@ -42,6 +51,8 @@ For anything routing-related, build and inspect `out/`.
 | `content/posts/*.md` | All blog posts. Source of truth for content. |
 | `src/lib/posts.ts` | Content loader: reads the markdown, parses front matter, derives slug/date/category, builds excerpts. |
 | `src/app/[category]/[slug]/page.tsx` | The only post route. Renders markdown via `marked` + `shiki`, pre-rendered by `generateStaticParams()`. |
+| `src/lib/headings.ts` | Heading slugs (anchor ids) and table-of-contents extraction. |
+| `src/components/TableOfContents*.tsx` | The post table of contents — sticky rail on wide screens, `<details>` block on narrow ones. |
 | `src/app/page.tsx` | Homepage — hero + reverse-chronological post list. |
 | `src/app/about/page.tsx` | About page. Bio and job history are hardcoded JSX, not markdown. |
 | `src/app/sitemap.ts` | Generates `sitemap.xml`. Add new static routes here. |
@@ -105,6 +116,27 @@ only `python, bash, json, yaml, markdown, plaintext, html, xml` with Shiki. Any 
 code fence **silently falls back to plaintext** — no error, no warning, just unstyled code. Adding a
 ` ```ts ` or ` ```rust ` block means adding that language to the list (in two places in that file:
 the `createHighlighter` langs array and the `supportedLangs` check).
+
+**Heading text is part of the URL surface.** `marked` emits no heading ids, so
+`src/lib/headings.ts` generates them from the heading text. Editing a heading changes its anchor
+and breaks any link to that section — the same class of breakage as changing `categories:`, just
+narrower. Repeated headings get `-1`, `-2` suffixes in document order, so *inserting* a duplicate
+heading renumbers the ones after it.
+
+The ids are produced twice — once by the `heading` renderer while building the HTML, once by
+`extractToc` while building the table of contents — and the two must agree. Both walk the whole
+document in order with a fresh slugger; don't make either one skip headings. To check:
+
+```bash
+npm run build && node -e "const h=require('fs').readFileSync(process.argv[1],'utf8');const ids=[...h.matchAll(/<h[1-6] id=\"([^\"]+)\"/g)].map(m=>m[1]);const links=[...new Set([...h.matchAll(/href=\"#([^\"]+)\"/g)].map(m=>m[1]))];console.log(links.filter(l=>!ids.includes(l)))" out/ai/qlora-ift/index.html
+```
+
+An empty array means every table-of-contents link resolves.
+
+**`toc:` is a custom breakpoint**, defined in `globals.css` as `--breakpoint-toc: 90rem`. It is not
+a round design number: it's the narrowest viewport where the gutter beside the 56rem article column
+still fits the 14rem rail plus its 2rem gap. Widening the rail or the article means recomputing it,
+or the rail runs off the right edge.
 
 **Post markdown is rendered with `dangerouslySetInnerHTML`.** That's fine for first-party content,
 but it means any HTML in a post is live. Don't pipe untrusted content through this path.
