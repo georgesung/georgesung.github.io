@@ -35,10 +35,12 @@ Caveat: the dev server is **not** a faithful stand-in for production here. This 
 export served by GitHub Pages, and URL-shape bugs (see below) do not reproduce under `next dev`.
 For anything routing-related, build and inspect `out/`.
 
-Second caveat: Turbopack caches compiled CSS across dev restarts, and a **new** `@theme` variable in
-`globals.css` (a custom breakpoint, say) may not show up even after restarting the server — the
-class silently never gets generated. `npm run build` is unaffected, so if a utility works in the
-production build but not in dev, clear the cache:
+Second caveat: Turbopack caches compiled CSS across dev restarts, and edits to `globals.css` may not
+show up even after restarting the server — new `@theme` variables (a custom breakpoint, say) never
+generate their classes, and plain rule edits can be served stale. The symptom is confusing rather
+than obvious: the page renders with the *previous* stylesheet and looks subtly broken. `npm run
+build` is unaffected, so whenever a style works in the production build but not in dev, don't debug
+the CSS — clear the cache:
 
 ```bash
 rm -rf .next/dev .next/cache

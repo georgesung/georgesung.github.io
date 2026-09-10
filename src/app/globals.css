@@ -169,6 +169,39 @@
   /* Clear the sticky 4rem header so anchor links don't land underneath it. */
   scroll-margin-top: 5rem;
 }
+/*
+ * Permalink beside each heading. Hidden until you hover the heading (or tab to
+ * the link), so it stays out of the way while reading. Where there is no hover
+ * to reveal it — touch — it sits faintly visible instead.
+ */
+.prose .heading-anchor {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: 0.35em;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.prose .heading-anchor svg {
+  width: 0.6em;
+  height: 0.6em;
+}
+.prose :is(h1, h2, h3, h4, h5, h6):hover .heading-anchor,
+.prose .heading-anchor:focus-visible {
+  opacity: 1;
+}
+.prose .heading-anchor:hover {
+  opacity: 1;
+  color: var(--foreground);
+}
+@media (hover: none) {
+  .prose .heading-anchor {
+    opacity: 0.4;
+  }
+}
+
 .prose h1 { font-size: 2.25rem; }
 .prose h2 { font-size: 1.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
 .prose h3 { font-size: 1.5rem; }

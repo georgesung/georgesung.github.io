@@ -15,6 +15,30 @@ interface PageProps {
   }>;
 }
 
+/**
+ * Lucide "link" icon, inlined as a string because post HTML is built as markup
+ * rather than JSX. Matches the icons in src/components/icons.tsx.
+ */
+const HEADING_ANCHOR_ICON =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" ' +
+  // Without intrinsic dimensions an SVG expands to fill its container, so keep
+  // it sane even if the stylesheet hasn't applied yet. CSS overrides these.
+  'width="1em" height="1em" fill="none" ' +
+  'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+  'stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+  '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>' +
+  '<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>' +
+  "</svg>";
+
+/** Heading text goes into an attribute, and headings contain & and " freely. */
+function escapeAttribute(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 let highlighterInstance: Awaited<ReturnType<typeof createHighlighter>> | null = null;
 
 async function getHighlighter() {
@@ -71,7 +95,10 @@ export default async function PostPage({ params }: PageProps) {
     renderer: {
       heading(token) {
         const id = slugFor(token.text);
-        return `<h${token.depth} id="${id}">${this.parser.parseInline(token.tokens)}</h${token.depth}>\n`;
+        const anchor =
+          `<a class="heading-anchor" href="#${id}" aria-label="Link to section: ` +
+          `${escapeAttribute(token.text)}">${HEADING_ANCHOR_ICON}</a>`;
+        return `<h${token.depth} id="${id}">${this.parser.parseInline(token.tokens)}${anchor}</h${token.depth}>\n`;
       },
       code(token: { text: string; lang?: string; escaped?: boolean }) {
         const language = token.lang || "plaintext";
