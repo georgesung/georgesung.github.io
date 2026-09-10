@@ -54,7 +54,7 @@ jobs:
           node-version: "20"
           cache: ${{ steps.detect-package-manager.outputs.manager }}
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
         # Deliberately no static_site_generator: next here. It makes this action
         # write its own next.config.js, which shadows next.config.ts and loses
         # trailingSlash. See the Deploy section of AGENTS.md before re-adding it.
