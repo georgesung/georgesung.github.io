@@ -2,6 +2,7 @@ import { getAllPosts, getPostBySlug } from "@/lib/posts";
 import { notFound } from "next/navigation";
 import { Marked } from "marked";
 import { createHighlighter } from "shiki";
+import { createSlugger } from "@/lib/headings";
 import Link from "next/link";
 
 interface PageProps {
@@ -59,8 +60,16 @@ export default async function PostPage({ params }: PageProps) {
   const highlighter = await getHighlighter();
   const markedInstance = new Marked();
 
+  // marked emits no heading ids of its own; generate them so sections are
+  // linkable and the table of contents has something to point at.
+  const slugFor = createSlugger();
+
   markedInstance.use({
     renderer: {
+      heading(token) {
+        const id = slugFor(token.text);
+        return `<h${token.depth} id="${id}">${this.parser.parseInline(token.tokens)}</h${token.depth}>\n`;
+      },
       code(token: { text: string; lang?: string; escaped?: boolean }) {
         const language = token.lang || "plaintext";
         const supportedLangs = ["python", "bash", "json", "yaml", "markdown", "plaintext", "html", "xml"];
