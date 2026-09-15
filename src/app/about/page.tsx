@@ -4,7 +4,8 @@ import { Github, Linkedin } from "@/components/icons";
 
 export const metadata = {
   title: "About | George Sung",
-  description: "Learn more about George Sung.",
+  description:
+    "About Jou-ching (George) Sung: AI/ML engineer focused on LLM post-training and reinforcement learning. Previously at Amazon, BMW, and AMD.",
 };
 
 export default function AboutPage() {
@@ -76,7 +77,7 @@ export default function AboutPage() {
               Hi! My name is <strong className="text-foreground">Jou-ching (George) Sung</strong>. I love learning and tinkering with all things AI -- from AI model training and serving, to AI agents, to AI chips.
             </p>
             <p>
-              My professional background spans LLM post-training, LLM/image-gen/TTS model inference optimization, AI agents, large-scale deep learning recommender systems, reinforcement learning for autonomous driving, and semiconductor chip design. Lots of different things, and certainly very fun! And maybe, useful ;)
+              Professionally, I focus on LLM post-training and reinforcement learning. My background also spans LLM serving, AI agents, large-scale deep learning recommender systems, reinforcement learning for autonomous driving, and semiconductor chip design. Lots of different things, and certainly very fun! And maybe, useful ;)
             </p>
           </div>
 
@@ -88,8 +89,9 @@ export default function AboutPage() {
                 <h4 className="text-lg font-bold text-foreground">GAZAI (generative media AI startup)</h4>
                 <span className="text-sm font-semibold text-primary">2025+</span>
               </div>
+              <p className="text-sm font-medium text-foreground mb-1">Founding AI Engineer &amp; Tech Lead</p>
               <p className="text-base text-muted-foreground">
-                LLM post-training, AI model inference optimization, AI agents
+                First AI hire. LLM post-training with reinforcement learning (GRPO, RLAIF, RLVR) for persona-consistent AI characters, self-hosted LLM serving, and AI agents
               </p>
             </div>
 
@@ -99,8 +101,9 @@ export default function AboutPage() {
                 <h4 className="text-lg font-bold text-foreground">Amazon</h4>
                 <span className="text-sm font-semibold text-muted-foreground">2020 – 2024</span>
               </div>
+              <p className="text-sm font-medium text-foreground mb-1">Machine Learning Engineer</p>
               <p className="text-base text-muted-foreground">
-                Deep learning for large scale recommender systems
+                Deep learning for large-scale recommender systems at Amazon Music
               </p>
             </div>
 
@@ -110,8 +113,24 @@ export default function AboutPage() {
                 <h4 className="text-lg font-bold text-foreground">BMW</h4>
                 <span className="text-sm font-semibold text-muted-foreground">2017 – 2020</span>
               </div>
+              <p className="text-sm font-medium text-foreground mb-1">Machine Learning Engineer</p>
               <p className="text-base text-muted-foreground">
                 Reinforcement learning and deep learning for autonomous driving
+              </p>
+            </div>
+
+            <div className="relative pl-6 border-l-2 border-border">
+              <div className="absolute -left-[6px] top-1.5 w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-1">
+                <h4 className="text-lg font-bold text-foreground">Career transition</h4>
+                <span className="text-sm font-semibold text-muted-foreground">2016 – 2017</span>
+              </div>
+              <p className="text-sm font-medium text-foreground mb-1">Sabbatical</p>
+              <p className="text-base text-muted-foreground">
+                Pivoted from chip design into AI and deep learning. I wrote about it:{" "}
+                <Link href="/career/becoming-mle/" className="text-primary hover:underline">
+                  Becoming a Self-Driving Car &amp; Machine Learning Engineer
+                </Link>
               </p>
             </div>
 
@@ -121,9 +140,23 @@ export default function AboutPage() {
                 <h4 className="text-lg font-bold text-foreground">AMD</h4>
                 <span className="text-sm font-semibold text-muted-foreground">2009 – 2016</span>
               </div>
+              <p className="text-sm font-medium text-foreground mb-1">Chip Design Engineer</p>
               <p className="text-base text-muted-foreground">
-                Semiconductor chip design
+                Semiconductor chip design and verification
               </p>
+            </div>
+          </div>
+
+          {/* Education */}
+          <div className="border-t pt-6 border-border">
+            <h3 className="text-lg font-bold text-foreground mb-3">Education</h3>
+            <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+              <div>
+                <p className="text-base font-medium text-foreground">University of Michigan – Ann Arbor</p>
+                <p className="text-base text-muted-foreground">
+                  M.S. Electrical Engineering, B.S. Computer Engineering
+                </p>
+              </div>
             </div>
           </div>
 

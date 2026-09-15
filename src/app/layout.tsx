@@ -17,8 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "George Sung | Machine Learning Engineer",
-  description: "George Sung's personal blog and ML/AI portfolio.",
+  title: "George Sung | AI/ML Engineer",
+  description:
+    "Personal blog of George Sung, an AI/ML engineer focused on LLM post-training and reinforcement learning.",
   icons: {
     icon: "/favicon.svg",
   },

@@ -3,8 +3,9 @@ import { getAllPosts } from "@/lib/posts";
 import { ArrowRight, Calendar, Tag } from "lucide-react";
 
 export const metadata = {
-  title: "George Sung",
-  description: "Personal blog of Jou-ching (George) Sung. All views and opinions expressed are my own.",
+  title: "George Sung | AI/ML Engineer",
+  description:
+    "Personal blog of Jou-ching (George) Sung, an AI/ML engineer focused on LLM post-training and reinforcement learning.",
 };
 
 export default function Home() {
@@ -18,7 +19,11 @@ export default function Home() {
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-4">
             Hi, I&apos;m George Sung.
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-6">
+          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-3">
+            AI/ML engineer focused on LLM post-training and reinforcement learning.
+            Previously at Amazon, BMW, and AMD.
+          </p>
+          <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-6">
             Welcome to my blog :) All views and opinions expressed here are my own.
           </p>
           <div className="flex gap-4">
