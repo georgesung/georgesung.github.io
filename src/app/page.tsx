@@ -21,10 +21,10 @@ export default function Home() {
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-3">
             AI/ML engineer focused on LLM post-training and reinforcement learning.
-            Previously at Amazon, BMW, and AMD.
+            Currently founding AI engineer at a generative media AI startup. Previously at Amazon, BMW, and AMD.
           </p>
           <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-6">
-            Welcome to my blog :) All views and opinions expressed here are my own.
+            All views and opinions expressed here are my own :)
           </p>
           <div className="flex gap-4">
             <Link

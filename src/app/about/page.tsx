@@ -127,7 +127,7 @@ export default function AboutPage() {
               </div>
               <p className="text-sm font-medium text-foreground mb-1">Sabbatical</p>
               <p className="text-base text-muted-foreground">
-                Pivoted from chip design into AI and deep learning. I wrote about it:{" "}
+                Pivoted from chip design into AI, then wrote about it:{" "}
                 <Link href="/career/becoming-mle/" className="text-primary hover:underline">
                   Becoming a Self-Driving Car &amp; Machine Learning Engineer
                 </Link>
@@ -144,19 +144,6 @@ export default function AboutPage() {
               <p className="text-base text-muted-foreground">
                 Semiconductor chip design and verification
               </p>
-            </div>
-          </div>
-
-          {/* Education */}
-          <div className="border-t pt-6 border-border">
-            <h3 className="text-lg font-bold text-foreground mb-3">Education</h3>
-            <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-              <div>
-                <p className="text-base font-medium text-foreground">University of Michigan – Ann Arbor</p>
-                <p className="text-base text-muted-foreground">
-                  M.S. Electrical Engineering, B.S. Computer Engineering
-                </p>
-              </div>
             </div>
           </div>
 
