@@ -47,7 +47,6 @@ The site uses a lightweight, zero-magic **compile-time Markdown parser** designe
   * **`src/app/globals.css`**: Tailwind v4 stylesheet containing theme configurations and custom `.prose` utility classes for styling raw HTML translated from Markdown.
 * **`src/lib/posts.ts`**: The content loader. It scans `content/posts/`, parses metadata using `gray-matter`, extracts filename slug/dates, and orders articles chronologically.
 * **`src/components/ThemeToggle.tsx`**: A FOUC-free (Flash of Unstyled Content) dark/light theme switch utilizing a blocking `<head>` inline script and browser local storage.
-* **`_legacy_jekyll/`**: Fully preserved archive of the original Jekyll blog configuration and post files.
 
 ---
 

@@ -10,7 +10,7 @@ George Sung's personal blog at **www.georgesung.com**. A Next.js 16 / React 19 /
 that is statically exported (`output: "export"`) and served by GitHub Pages. No server, no database,
 no CMS — posts are markdown files on disk, rendered to HTML at build time.
 
-It replaced a Jekyll blog in 2026. The old site is archived, unused, in `_legacy_jekyll/`.
+It replaced a Jekyll blog in 2026.
 
 ## Commands
 
@@ -61,7 +61,6 @@ rm -rf .next/dev .next/cache
 | `src/app/sitemap.ts` | Generates `sitemap.xml`. Add new static routes here. |
 | `src/app/globals.css` | Tailwind v4 theme + the `.prose` classes that style rendered post HTML. |
 | `public/` | Static assets. `CNAME` sets the custom domain; `assets/img/<post-slug>/` holds post images. |
-| `_legacy_jekyll/` | **Archive. Do not edit or build.** Kept for reference only. |
 
 `out/`, `.next/`, `node_modules/`, and `gsung_stash/` are gitignored — never commit them.
 
